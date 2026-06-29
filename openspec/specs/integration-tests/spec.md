@@ -29,7 +29,7 @@ The integration runner SHALL read text fixtures from `test/resources/*.text`, in
 
 ### Requirement: JSON5 fixture coverage
 
-The runner SHALL process `test/resources/test.json5.text` with json5 APIs and produce four output files.
+The runner SHALL process `test/resources/test.json5.text` with json5 APIs and produce five output files.
 
 #### Scenario: JSON5 validate success
 
@@ -46,10 +46,15 @@ The runner SHALL process `test/resources/test.json5.text` with json5 APIs and pr
 - **WHEN** json5.format is called with default options on `test.json5.text`
 - **THEN** the runner writes the formatted string to `test/resources/out/test.json5.format.text`
 
-#### Scenario: JSON5 format with sortKeys
+#### Scenario: JSON5 format with sortKeys and compact
 
-- **WHEN** json5.format is called with `{ sortKeys: true }` on `test.json5.text`
+- **WHEN** json5.format is called with `{ sortKeys: true, compact: true }` on `test.json5.text`
 - **THEN** the runner writes the formatted string to `test/resources/out/test.json5.format.sorted.text`
+
+#### Scenario: JSON5 format with compact
+
+- **WHEN** json5.format is called with `{ compact: true }` on `test.json5.text`
+- **THEN** the runner writes the formatted string to `test/resources/out/test.json5.format.compact.text`
 
 ### Requirement: JSON fixture coverage
 
@@ -64,6 +69,16 @@ The runner SHALL process `test/resources/test.json.text` containing valid standa
 
 - **WHEN** json.parse succeeds on `test.json.text`
 - **THEN** the runner writes pretty-printed JSON to `test/resources/out/test.json.parse.json`
+
+#### Scenario: JSON fixture includes numeric string key
+
+- **WHEN** `test.json.text` is applied
+- **THEN** the fixture contains a root-level `"1"` string key with value `"数字key"` (standard JSON quoted key, not JSON5 unquoted numeric key)
+
+#### Scenario: JSON parse preserves numeric string key
+
+- **WHEN** json.parse succeeds on `test.json.text`
+- **THEN** the parse result satisfies `result["1"] === "数字key"`
 
 ### Requirement: Java8 fixture coverage
 

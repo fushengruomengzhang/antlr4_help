@@ -1,123 +1,154 @@
 import Java8Parser from './Java8Parser.js';
+import {
+  parseElementValue,
+  parseVariableInitializer,
+  splitAnnotationsAndModifiers,
+} from './annotation-parser.js';
+import {
+  parseExtendsType,
+  parseFormalParameters,
+  parseImplementsTypes,
+  parseReturnType,
+  parseThrowsTypes,
+  parseTypeParameters,
+  parseTypeSignature,
+} from './type-parser.js';
 
-/** @param {import('antlr4').ParserRuleContext[]} modifierCtxs */
-function extractModifiers(modifierCtxs) {
-  if (!modifierCtxs || modifierCtxs.length === 0) return [];
-  return modifierCtxs.map((m) => m.getText()).filter(Boolean);
+/** @param {import('./Java8Parser.js').default.DimsContext | null | undefined} ctx */
+function countDimensions(ctx) {
+  if (!ctx) return 0;
+  return ctx.LBRACK?.()?.length ?? 0;
 }
 
-/** @param {import('antlr4').ParserRuleContext | null | undefined} ctx */
-function ctxText(ctx) {
-  if (!ctx) return undefined;
-  return ctx.getText();
-}
-
-/** @param {import('./Java8Parser.js').default.SuperclassContext | null | undefined} ctx */
-function extractExtends(ctx) {
-  if (!ctx) return undefined;
-  const text = ctx.getText();
-  return text.replace(/^extends\s*/, '') || undefined;
-}
-
-/** @param {import('./Java8Parser.js').default.SuperinterfacesContext | null | undefined} ctx */
-function extractImplements(ctx) {
-  if (!ctx) return undefined;
-  const text = ctx.getText().replace(/^implements\s*/, '');
-  if (!text) return undefined;
-  return text.split(',').map((s) => s.trim()).filter(Boolean);
-}
-
-/** @param {import('./Java8Parser.js').default.ExtendsInterfacesContext | null | undefined} ctx */
-function extractInterfaceExtends(ctx) {
-  if (!ctx) return undefined;
-  const text = ctx.getText().replace(/^extends\s*/, '');
-  if (!text) return undefined;
-  return text.split(',').map((s) => s.trim()).filter(Boolean);
-}
-
-/** @param {import('./Java8Parser.js').default.FieldDeclarationContext} ctx */
-function extractField(ctx) {
-  const type = ctx.unannType()?.getText() ?? '';
-  const modifiers = extractModifiers(ctx.fieldModifier?.() ?? []);
+/** @param {import('./Java8Parser.js').default.FieldDeclarationContext} ctx @returns {import('./models.js').FieldMemberModel[]} */
+function extractFields(ctx) {
+  const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.fieldModifier?.() ?? []);
+  const type = parseTypeSignature(ctx.unannType?.()) ?? { kind: 'primitive', name: 'void' };
   const list = ctx.variableDeclaratorList()?.variableDeclarator?.() ?? [];
-  const names = list.map((v) => v.variableDeclaratorId()?.getText() ?? '');
-  return /** @type {import('./models.js').MemberModel} */ ({
-    kind: 'field',
-    type,
-    names,
-    modifiers,
-    signature: ctx.getText().replace(/;+$/, ''),
+
+  return list.map((v) => {
+    /** @type {import('./models.js').FieldMemberModel} */
+    const member = {
+      kind: 'field',
+      name: v.variableDeclaratorId()?.Identifier()?.getText() ?? '',
+      annotations,
+      modifiers,
+      type,
+    };
+    const defaultValue = parseVariableInitializer(v.variableInitializer?.());
+    if (defaultValue !== undefined) {
+      member.defaultValue = defaultValue;
+    }
+    return member;
   });
+}
+
+/** @param {import('./Java8Parser.js').default.MethodHeaderContext | null | undefined} header @param {import('./models.js').AnnotationMap} memberAnnotations @param {string[]} memberModifiers @param {string} name @param {'method' | 'constructor'} kind @param {import('./models.js').TypeParameterModel[] | undefined} outerTypeParameters */
+function buildCallableMember(header, memberAnnotations, memberModifiers, name, kind, outerTypeParameters) {
+  const typeParameters = parseTypeParameters(header?.typeParameters?.()) ?? outerTypeParameters;
+  const parameters = parseFormalParameters(header?.methodDeclarator?.()?.formalParameterList?.());
+  const throwsTypes = parseThrowsTypes(header?.throws_?.());
+
+  if (kind === 'constructor') {
+    /** @type {import('./models.js').ConstructorMemberModel} */
+    const model = {
+      kind: 'constructor',
+      name,
+      annotations: memberAnnotations,
+      modifiers: memberModifiers,
+      parameters,
+    };
+    if (typeParameters?.length) model.typeParameters = typeParameters;
+    if (throwsTypes?.length) model.throwsTypes = throwsTypes;
+    return model;
+  }
+
+  const declarator = header?.methodDeclarator?.();
+  const returnDimensions = countDimensions(declarator?.dims?.());
+  /** @type {import('./models.js').MethodMemberModel} */
+  const model = {
+    kind: 'method',
+    name,
+    annotations: memberAnnotations,
+    modifiers: memberModifiers,
+    returnType: parseReturnType(header?.result?.()),
+    parameters,
+  };
+  if (typeParameters?.length) model.typeParameters = typeParameters;
+  if (returnDimensions > 0) model.returnDimensions = returnDimensions;
+  if (throwsTypes?.length) model.throwsTypes = throwsTypes;
+  return model;
 }
 
 /** @param {import('./Java8Parser.js').default.MethodDeclarationContext} ctx */
 function extractMethod(ctx) {
+  const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.methodModifier?.() ?? []);
   const header = ctx.methodHeader();
-  const modifiers = extractModifiers(ctx.methodModifier?.() ?? []);
-  const declarator = header?.methodDeclarator();
-  const name = declarator?.Identifier()?.getText();
-  const returnType = header?.result()?.getText();
-  return /** @type {import('./models.js').MemberModel} */ ({
-    kind: 'method',
-    name,
-    returnType,
-    params: declarator?.getText()?.match(/\(.*\)/)?.[0],
-    modifiers,
-    throws: ctxText(header?.throws_?.()),
-    signature: `${modifiers.join(' ')} ${header?.getText() ?? ''}`.trim(),
-  });
+  const name = header?.methodDeclarator?.()?.Identifier()?.getText() ?? '';
+  return buildCallableMember(header, annotations, modifiers, name, 'method', undefined);
 }
 
 /** @param {import('./Java8Parser.js').default.InterfaceMethodDeclarationContext} ctx */
 function extractInterfaceMethod(ctx) {
+  const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.interfaceMethodModifier?.() ?? []);
   const header = ctx.methodHeader();
-  const modifiers = extractModifiers(ctx.interfaceMethodModifier?.() ?? []);
-  const declarator = header?.methodDeclarator();
-  return /** @type {import('./models.js').MemberModel} */ ({
-    kind: 'method',
-    name: declarator?.Identifier()?.getText(),
-    returnType: header?.result()?.getText(),
-    params: declarator?.getText()?.match(/\(.*\)/)?.[0],
-    modifiers,
-    signature: `${modifiers.join(' ')} ${header?.getText() ?? ''}`.trim(),
-  });
+  const name = header?.methodDeclarator?.()?.Identifier()?.getText() ?? '';
+  return buildCallableMember(header, annotations, modifiers, name, 'method', undefined);
 }
 
 /** @param {import('./Java8Parser.js').default.ConstructorDeclarationContext} ctx */
 function extractConstructor(ctx) {
+  const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.constructorModifier?.() ?? []);
   const declarator = ctx.constructorDeclarator();
-  const modifiers = extractModifiers(ctx.constructorModifier?.() ?? []);
-  return /** @type {import('./models.js').MemberModel} */ ({
+  const name = declarator?.simpleTypeName()?.Identifier()?.getText() ?? '';
+  const typeParameters = parseTypeParameters(ctx.typeParameters?.());
+  const parameters = parseFormalParameters(declarator?.formalParameterList?.());
+  const throwsTypes = parseThrowsTypes(ctx.throws_?.());
+
+  /** @type {import('./models.js').ConstructorMemberModel} */
+  const model = {
     kind: 'constructor',
-    name: declarator?.simpleTypeName()?.Identifier()?.getText(),
-    params: declarator?.getText()?.match(/\(.*\)/)?.[0],
+    name,
+    annotations,
     modifiers,
-    throws: ctxText(ctx.throws_?.()),
-    signature: `${modifiers.join(' ')} ${declarator?.getText() ?? ''}`.trim(),
-  });
+    parameters,
+  };
+  if (typeParameters?.length) model.typeParameters = typeParameters;
+  if (throwsTypes?.length) model.throwsTypes = throwsTypes;
+  return model;
 }
 
 /** @param {import('./Java8Parser.js').default.EnumConstantContext} ctx */
 function extractEnumConstant(ctx) {
-  return /** @type {import('./models.js').MemberModel} */ ({
+  const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.enumConstantModifier?.() ?? []);
+  return /** @type {import('./models.js').EnumConstantMemberModel} */ ({
     kind: 'enumConstant',
-    name: ctx.Identifier()?.getText(),
-    modifiers: [],
-    signature: ctx.getText().split('{')[0],
+    name: ctx.Identifier()?.getText() ?? '',
+    annotations,
+    modifiers,
   });
 }
 
-/** @param {import('./Java8Parser.js').default.ConstantDeclarationContext} ctx */
-function extractInterfaceConstant(ctx) {
-  const type = ctx.unannType()?.getText() ?? '';
-  const modifiers = extractModifiers(ctx.constantModifier?.() ?? []);
-  const names = ctx.variableDeclaratorList()?.variableDeclarator?.().map((v) => v.variableDeclaratorId()?.getText() ?? '') ?? [];
-  return /** @type {import('./models.js').MemberModel} */ ({
-    kind: 'interfaceConstant',
-    type,
-    names,
-    modifiers,
-    signature: ctx.getText().replace(/;+$/, ''),
+/** @param {import('./Java8Parser.js').default.ConstantDeclarationContext} ctx @returns {import('./models.js').InterfaceConstantMemberModel[]} */
+function extractInterfaceConstants(ctx) {
+  const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.constantModifier?.() ?? []);
+  const type = parseTypeSignature(ctx.unannType?.()) ?? { kind: 'primitive', name: 'void' };
+  const list = ctx.variableDeclaratorList()?.variableDeclarator?.() ?? [];
+
+  return list.map((v) => {
+    /** @type {import('./models.js').InterfaceConstantMemberModel} */
+    const member = {
+      kind: 'interfaceConstant',
+      name: v.variableDeclaratorId()?.Identifier()?.getText() ?? '',
+      annotations,
+      modifiers,
+      type,
+    };
+    const defaultValue = parseVariableInitializer(v.variableInitializer?.());
+    if (defaultValue !== undefined) {
+      member.defaultValue = defaultValue;
+    }
+    return member;
   });
 }
 
@@ -134,32 +165,46 @@ function extractFromClassDeclaration(classDecl) {
 
 /** @param {import('./Java8Parser.js').default.NormalClassDeclarationContext} ctx */
 function extractNormalClass(ctx) {
+  const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.classModifier?.() ?? []);
   /** @type {import('./models.js').TypeModel} */
   const model = {
     kind: 'class',
     name: ctx.Identifier()?.getText() ?? '',
-    modifiers: extractModifiers(ctx.classModifier?.() ?? []),
-    typeParameters: ctxText(ctx.typeParameters()),
-    extends: extractExtends(ctx.superclass()),
-    implements: extractImplements(ctx.superinterfaces()),
+    annotations,
+    modifiers,
     ownMembers: [],
     nestedTypes: [],
   };
+
+  const typeParameters = parseTypeParameters(ctx.typeParameters?.());
+  if (typeParameters?.length) model.typeParameters = typeParameters;
+
+  const extendsType = parseExtendsType(ctx.superclass?.());
+  if (extendsType) model.extendsType = extendsType;
+
+  const implementsTypes = parseImplementsTypes(ctx.superinterfaces?.());
+  if (implementsTypes?.length) model.implementsTypes = implementsTypes;
+
   fillClassBody(model, ctx.classBody());
   return model;
 }
 
 /** @param {import('./Java8Parser.js').default.EnumDeclarationContext} ctx */
 function extractEnum(ctx) {
+  const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.classModifier?.() ?? []);
   /** @type {import('./models.js').TypeModel} */
   const model = {
     kind: 'enum',
     name: ctx.Identifier()?.getText() ?? '',
-    modifiers: extractModifiers(ctx.classModifier?.() ?? []),
-    implements: extractImplements(ctx.superinterfaces()),
+    annotations,
+    modifiers,
     ownMembers: [],
     nestedTypes: [],
   };
+
+  const implementsTypes = parseImplementsTypes(ctx.superinterfaces?.());
+  if (implementsTypes?.length) model.implementsTypes = implementsTypes;
+
   const body = ctx.enumBody();
   if (body) {
     const constants = body.enumConstantList()?.enumConstant?.() ?? [];
@@ -187,46 +232,48 @@ function extractFromInterfaceDeclaration(ifaceDecl) {
 
 /** @param {import('./Java8Parser.js').default.NormalInterfaceDeclarationContext} ctx */
 function extractNormalInterface(ctx) {
+  const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.interfaceModifier?.() ?? []);
   /** @type {import('./models.js').TypeModel} */
   const model = {
     kind: 'interface',
     name: ctx.Identifier()?.getText() ?? '',
-    modifiers: extractModifiers(ctx.interfaceModifier?.() ?? []),
-    typeParameters: ctxText(ctx.typeParameters()),
-    extends: undefined,
-    implements: extractInterfaceExtends(ctx.extendsInterfaces()),
+    annotations,
+    modifiers,
     ownMembers: [],
     nestedTypes: [],
   };
+
+  const typeParameters = parseTypeParameters(ctx.typeParameters?.());
+  if (typeParameters?.length) model.typeParameters = typeParameters;
+
+  const implementsTypes = parseImplementsTypes(ctx.extendsInterfaces?.());
+  if (implementsTypes?.length) model.implementsTypes = implementsTypes;
+
   fillInterfaceBody(model, ctx.interfaceBody());
   return model;
 }
 
 /** @param {import('./Java8Parser.js').default.AnnotationTypeDeclarationContext} ctx */
 function extractAnnotationType(ctx) {
+  const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.interfaceModifier?.() ?? []);
   /** @type {import('./models.js').TypeModel} */
   const model = {
     kind: 'annotation',
     name: ctx.Identifier()?.getText() ?? '',
-    modifiers: extractModifiers(ctx.interfaceModifier?.() ?? []),
+    annotations,
+    modifiers,
     ownMembers: [],
     nestedTypes: [],
   };
+
   const body = ctx.annotationTypeBody();
   const members = body?.annotationTypeMemberDeclaration?.() ?? [];
   for (const m of members) {
     if (m.constantDeclaration()) {
-      model.ownMembers.push(extractInterfaceConstant(m.constantDeclaration()));
+      model.ownMembers.push(...extractInterfaceConstants(m.constantDeclaration()));
     }
     if (m.annotationTypeElementDeclaration()) {
-      const el = m.annotationTypeElementDeclaration();
-      model.ownMembers.push({
-        kind: 'annotationElement',
-        name: el.Identifier()?.getText(),
-        type: el.unannType()?.getText(),
-        modifiers: [],
-        signature: el.getText().replace(/;+$/, ''),
-      });
+      model.ownMembers.push(extractAnnotationElement(m.annotationTypeElementDeclaration()));
     }
     if (m.classDeclaration()) {
       const nested = extractFromClassDeclaration(m.classDeclaration());
@@ -236,6 +283,24 @@ function extractAnnotationType(ctx) {
       const nested = extractFromInterfaceDeclaration(m.interfaceDeclaration());
       if (nested) model.nestedTypes.push(nested);
     }
+  }
+  return model;
+}
+
+/** @param {import('./Java8Parser.js').default.AnnotationTypeElementDeclarationContext} ctx */
+function extractAnnotationElement(ctx) {
+  const { annotations } = splitAnnotationsAndModifiers(ctx.annotationTypeElementModifier?.() ?? []);
+  /** @type {import('./models.js').AnnotationElementMemberModel} */
+  const model = {
+    kind: 'annotationElement',
+    name: ctx.Identifier()?.getText() ?? '',
+    annotations,
+    type: parseTypeSignature(ctx.unannType?.()) ?? { kind: 'primitive', name: 'void' },
+  };
+
+  const defaultValue = parseElementValue(ctx.defaultValue?.()?.elementValue?.());
+  if (defaultValue !== undefined) {
+    model.defaultValue = defaultValue;
   }
   return model;
 }
@@ -258,7 +323,7 @@ function processClassBodyDeclaration(model, decl) {
   const member = decl.classMemberDeclaration?.();
   if (!member) return;
   if (member.fieldDeclaration()) {
-    model.ownMembers.push(extractField(member.fieldDeclaration()));
+    model.ownMembers.push(...extractFields(member.fieldDeclaration()));
   } else if (member.methodDeclaration()) {
     model.ownMembers.push(extractMethod(member.methodDeclaration()));
   } else if (member.classDeclaration()) {
@@ -276,7 +341,7 @@ function fillInterfaceBody(model, body) {
   const decls = body.interfaceMemberDeclaration?.() ?? [];
   for (const decl of decls) {
     if (decl.constantDeclaration()) {
-      model.ownMembers.push(extractInterfaceConstant(decl.constantDeclaration()));
+      model.ownMembers.push(...extractInterfaceConstants(decl.constantDeclaration()));
     } else if (decl.interfaceMethodDeclaration()) {
       model.ownMembers.push(extractInterfaceMethod(decl.interfaceMethodDeclaration()));
     } else if (decl.classDeclaration()) {

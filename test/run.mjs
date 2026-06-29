@@ -61,13 +61,28 @@ runCase('json5 format', 'test.json5.format.text', () => json5.format(json5Input)
   errorName: 'test.json5.format.error.json',
 });
 
-runCase('json5 format (sortKeys)', 'test.json5.format.sorted.text', () => json5.format(json5Input, { sortKeys: true }), {
+runCase('json5 format (sortKeys)', 'test.json5.format.sorted.text', () => json5.format(json5Input, { sortKeys: true, compact: true }), {
   errorName: 'test.json5.format.sorted.error.json',
 });
 
-runCase('json parse', 'test.json.parse.json', () => json.parse(jsonInput), {
-  errorName: 'test.json.parse.error.json',
+runCase('json5 format (compact)', 'test.json5.format.compact.text', () => json5.format(json5Input, { compact: true }), {
+  errorName: 'test.json5.format.compact.error.json',
 });
+
+runCase(
+  'json parse',
+  'test.json.parse.json',
+  () => {
+    const result = json.parse(jsonInput);
+    if (result['1'] !== '数字key') {
+      throw new Error(`expected result["1"] === "数字key", got ${JSON.stringify(result['1'])}`);
+    }
+    return result;
+  },
+  {
+    errorName: 'test.json.parse.error.json',
+  },
+);
 
 runCase('java8 firstClassName', 'test.java.firstClassName.txt', () => java8.firstClassName(javaInput), {
   errorName: 'test.java.firstClassName.error.json',

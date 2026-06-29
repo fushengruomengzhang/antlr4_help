@@ -7,6 +7,8 @@ package com.zhangfusheng.cn.model;
 
       private static final String uuid="123";
 
+      private int a = 1, b = 2;
+
       @ApiModelProperty(value = "用户名 支持模糊查询",required = true)
       private String name;
 
@@ -56,4 +58,9 @@ package com.zhangfusheng.cn.model;
     public class UserDetail {
       @ApiModelProperty("用户基础信息")
       private TbUser user;
+    }
+
+    public class UserP extends  User {
+        private String id;
+        private String nameBack;
     }

@@ -46,6 +46,7 @@ json5.parse('{ a: 1, }');              // → object
 json5.format('{ a: 1, }', {
   indent: { type: 'space', size: 2 },  // 或 { type: 'tab' }
   sortKeys: false,
+  compact: false,  // true：紧凑布局 + 保留源字符串 token 形态
 });
 
 // JSON（100% ANTLR）
@@ -63,7 +64,8 @@ java8.signatures(javaSource);                   // → FileModel
 ### JSON5 format 规则
 
 - 缩进/换行可配置；去掉尾逗号
-- 单行字符串 value 统一为 `"..."`；三引号多行保留为 `"""..."""`（`'''` 转为 `"""`）
+- **默认**（`compact: false`）：结构换行清晰；单行字符串 value 统一为 `"..."`；三引号多行保留为 `"""..."""`（`'''` 转为 `"""`）
+- **compact**（`compact: true`）：紧凑布局（行尾注释同行、少空行）；保留源字符串 token 形态（单引号/`'''`/行续接）
 - 注释保留并锚定在 member 上；`sortKeys: true` 时注释随 member 移动
 - key 保留 JSON5 形态（标识符/数字/关键字/引号串）
 

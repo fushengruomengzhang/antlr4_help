@@ -1,0 +1,445 @@
+{
+  "types": [
+    {
+      "kind": "class",
+      "name": "User",
+      "annotations": {
+        "Data": {},
+        "ApiModel": {
+          "value": "用户信息"
+        }
+      },
+      "modifiers": [
+        "public"
+      ],
+      "ownMembers": [
+        {
+          "kind": "field",
+          "name": "uuid",
+          "annotations": {},
+          "modifiers": [
+            "private",
+            "static",
+            "final"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "String"
+          },
+          "defaultValue": "123"
+        },
+        {
+          "kind": "field",
+          "name": "a",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "primitive",
+            "name": "int"
+          },
+          "defaultValue": 1
+        },
+        {
+          "kind": "field",
+          "name": "b",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "primitive",
+            "name": "int"
+          },
+          "defaultValue": 2
+        },
+        {
+          "kind": "field",
+          "name": "name",
+          "annotations": {
+            "ApiModelProperty": {
+              "value": "用户名 支持模糊查询",
+              "required": true
+            }
+          },
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "String"
+          }
+        },
+        {
+          "kind": "field",
+          "name": "age",
+          "annotations": {
+            "ESDocument": {},
+            "IgnoreDocument": {},
+            "ApiModelProperty": {
+              "value": "年龄"
+            }
+          },
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "primitive",
+            "name": "int"
+          }
+        },
+        {
+          "kind": "field",
+          "name": "child",
+          "annotations": {
+            "ApiModelProperty": {
+              "value": "孩子们"
+            }
+          },
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "List",
+            "typeArguments": [
+              {
+                "kind": "class",
+                "name": "User"
+              }
+            ]
+          }
+        },
+        {
+          "kind": "field",
+          "name": "userDetail",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "UserDetail"
+          }
+        },
+        {
+          "kind": "field",
+          "name": "userDetails",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "List",
+            "typeArguments": [
+              {
+                "kind": "class",
+                "name": "UserDetail"
+              }
+            ]
+          }
+        },
+        {
+          "kind": "field",
+          "name": "userDetailGroupByName",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "Map",
+            "typeArguments": [
+              {
+                "kind": "class",
+                "name": "String"
+              },
+              {
+                "kind": "class",
+                "name": "UserDetail"
+              }
+            ]
+          }
+        },
+        {
+          "kind": "field",
+          "name": "mlus",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "Map",
+            "typeArguments": [
+              {
+                "kind": "class",
+                "name": "String"
+              },
+              {
+                "kind": "class",
+                "name": "List",
+                "typeArguments": [
+                  {
+                    "kind": "class",
+                    "name": "UserDetail"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "kind": "field",
+          "name": "lmus",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "List",
+            "typeArguments": [
+              {
+                "kind": "class",
+                "name": "Map",
+                "typeArguments": [
+                  {
+                    "kind": "class",
+                    "name": "String"
+                  },
+                  {
+                    "kind": "class",
+                    "name": "UserDetail"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "kind": "field",
+          "name": "lmlus",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "List",
+            "typeArguments": [
+              {
+                "kind": "class",
+                "name": "Map",
+                "typeArguments": [
+                  {
+                    "kind": "class",
+                    "name": "String"
+                  },
+                  {
+                    "kind": "class",
+                    "name": "List",
+                    "typeArguments": [
+                      {
+                        "kind": "class",
+                        "name": "UserDetail"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "kind": "method",
+          "name": "getName",
+          "annotations": {},
+          "modifiers": [
+            "public"
+          ],
+          "returnType": {
+            "kind": "class",
+            "name": "String"
+          },
+          "parameters": []
+        },
+        {
+          "kind": "field",
+          "name": "createTime",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "LocalDateTime"
+          }
+        },
+        {
+          "kind": "method",
+          "name": "getAge",
+          "annotations": {
+            "Skip": {
+              "c": true
+            }
+          },
+          "modifiers": [
+            "public"
+          ],
+          "returnType": {
+            "kind": "primitive",
+            "name": "int"
+          },
+          "parameters": []
+        },
+        {
+          "kind": "method",
+          "name": "setH",
+          "annotations": {
+            "Skip": {
+              "c": true
+            }
+          },
+          "modifiers": [
+            "public"
+          ],
+          "returnType": {
+            "kind": "void"
+          },
+          "parameters": [
+            {
+              "name": "a",
+              "type": {
+                "kind": "primitive",
+                "name": "int"
+              },
+              "annotations": {
+                "H": {
+                  "p": "dd"
+                }
+              },
+              "modifiers": []
+            },
+            {
+              "name": "b",
+              "type": {
+                "kind": "primitive",
+                "name": "int"
+              },
+              "annotations": {},
+              "modifiers": []
+            },
+            {
+              "name": "c",
+              "type": {
+                "kind": "primitive",
+                "name": "int"
+              },
+              "annotations": {},
+              "modifiers": []
+            }
+          ]
+        }
+      ],
+      "nestedTypes": [
+        {
+          "kind": "class",
+          "name": "User2",
+          "annotations": {},
+          "modifiers": [
+            "public"
+          ],
+          "ownMembers": [
+            {
+              "kind": "field",
+              "name": "i",
+              "annotations": {},
+              "modifiers": [
+                "private"
+              ],
+              "type": {
+                "kind": "primitive",
+                "name": "int"
+              }
+            }
+          ],
+          "nestedTypes": []
+        }
+      ]
+    },
+    {
+      "kind": "class",
+      "name": "UserDetail",
+      "annotations": {
+        "Data": {},
+        "ApiModel": {
+          "value": "用户详情"
+        }
+      },
+      "modifiers": [
+        "public"
+      ],
+      "ownMembers": [
+        {
+          "kind": "field",
+          "name": "user",
+          "annotations": {
+            "ApiModelProperty": {
+              "value": "用户基础信息"
+            }
+          },
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "TbUser"
+          }
+        }
+      ],
+      "nestedTypes": []
+    },
+    {
+      "kind": "class",
+      "name": "UserP",
+      "annotations": {},
+      "modifiers": [
+        "public"
+      ],
+      "ownMembers": [
+        {
+          "kind": "field",
+          "name": "id",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "String"
+          }
+        },
+        {
+          "kind": "field",
+          "name": "nameBack",
+          "annotations": {},
+          "modifiers": [
+            "private"
+          ],
+          "type": {
+            "kind": "class",
+            "name": "String"
+          }
+        }
+      ],
+      "nestedTypes": [],
+      "extendsType": {
+        "kind": "class",
+        "name": "User"
+      }
+    }
+  ]
+}

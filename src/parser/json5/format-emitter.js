@@ -17,11 +17,13 @@ const HIDDEN = antlr4.Token.HIDDEN_CHANNEL;
  * @typedef {object} FormatOptions
  * @property {IndentConfig} [indent]
  * @property {boolean} [sortKeys]
+ * @property {boolean} [compact]
  */
 
 export const DEFAULT_FORMAT_OPTIONS = {
   indent: { type: 'space', size: 2 },
   sortKeys: false,
+  compact: false,
 };
 
 /**
@@ -33,6 +35,7 @@ export function normalizeFormatOptions(options) {
   return {
     indent: indent.type === 'tab' ? { type: 'tab' } : { type: 'space', size: indent.size ?? 2 },
     sortKeys: options?.sortKeys ?? false,
+    compact: options?.compact ?? false,
   };
 }
 
@@ -84,17 +87,103 @@ export class FormatEmitter {
   }
 
   /**
+   * @param {import('antlr4').Token[]} hiddenTokens
+   * @param {Set<number>} [excludeIndices]
+   */
+  emitHiddenCompact(hiddenTokens, excludeIndices) {
+    const filtered = excludeIndices
+      ? hiddenTokens.filter((t) => !excludeIndices.has(t.tokenIndex))
+      : hiddenTokens;
+    return this.compactWhitespace(this.emitHidden(filtered));
+  }
+
+  /** @param {string} text */
+  compactWhitespace(text) {
+    return text.replace(/\n{2,}/g, '\n');
+  }
+
+  /** @param {string} out @param {number} depth */
+  beginMemberLine(out, depth) {
+    let line = out.replace(/\n[ \t]+$/, '\n');
+    if (!line.endsWith('\n')) {
+      line += '\n';
+    }
+    return line + this.indentUnit(depth + 1);
+  }
+
+  /** @param {string} out @param {number} depth */
+  beginCloseLine(out, depth) {
+    let line = out.replace(/\n[ \t]+$/, '\n');
+    if (!line.endsWith('\n')) {
+      line += '\n';
+    }
+    return line + this.indentUnit(depth);
+  }
+
+  /**
+   * @param {import('antlr4').Token} fromTok
+   * @param {import('antlr4').Token} toTok
+   */
+  spanBetween(fromTok, toTok) {
+    if (!fromTok || !toTok || fromTok.tokenIndex == null || toTok.tokenIndex == null) {
+      return '';
+    }
+    this.tokens.fill();
+    const parts = [];
+    for (let i = fromTok.tokenIndex + 1; i < toTok.tokenIndex; i++) {
+      const t = this.tokens.tokens[i];
+      if (!t || t.type === antlr4.Token.EOF) continue;
+      parts.push(t.text);
+    }
+    return parts.join('');
+  }
+
+  /** @param {string} suffix */
+  stripTrailingCommaSuffix(suffix) {
+    return suffix.replace(/,(\s*(?:\/\/[^\n\r]*|\/\*[\s\S]*?\*\/)?\s*)$/, '$1');
+  }
+
+  /** @param {string} text */
+  containsComma(text) {
+    return /,/.test(text);
+  }
+
+  /**
    * @param {import('./Json5Parser.js').default.Json5Context} root
    */
   formatDocument(root) {
-    return this.formatValue(root.value(), 0).trimEnd();
+    const valueCtx = root.value();
+    let out = this.emitHidden(this.hiddenLeft(valueCtx.start));
+    if (this.options.compact) {
+      out = this.compactWhitespace(out);
+    }
+    out += this.formatValue(valueCtx, 0);
+    let footer = this.emitHidden(this.hiddenRight(this.endToken(valueCtx)));
+    if (this.options.compact) {
+      footer = this.compactWhitespace(footer);
+    }
+    out += footer;
+    return out.trimEnd();
   }
 
   /** @param {import('./Json5Parser.js').default.ValueContext} ctx @param {number} depth */
   formatValue(ctx, depth) {
     if (ctx.object()) return this.formatObject(ctx.object(), depth);
     if (ctx.array()) return this.formatArray(ctx.array(), depth);
-    return this.formatPrimitiveValue(ctx);
+    return this.options.compact ? this.emitSourceValue(ctx) : this.formatPrimitiveValue(ctx);
+  }
+
+  /** @param {import('./Json5Parser.js').default.ValueContext} ctx */
+  emitSourceValue(ctx) {
+    if (ctx.STRING()) return ctx.STRING().getText();
+    if (ctx.TRIPLE_DOUBLE_STRING()) return ctx.TRIPLE_DOUBLE_STRING().getText();
+    if (ctx.TRIPLE_SINGLE_STRING()) return ctx.TRIPLE_SINGLE_STRING().getText();
+    if (ctx.NUMBER()) return ctx.NUMBER().getText();
+    if (ctx.TRUE()) return 'true';
+    if (ctx.FALSE()) return 'false';
+    if (ctx.NULL()) return 'null';
+    if (ctx.literal()) return ctx.literal().getText();
+    return ctx.getText();
   }
 
   /** @param {import('./Json5Parser.js').default.ValueContext} ctx */
@@ -152,8 +241,132 @@ export class FormatEmitter {
 
   /** @param {import('./Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
   formatObject(ctx, depth) {
-    const lbrace = ctx.LBRACE();
-    const rbrace = ctx.RBRACE();
+    if (this.options.compact) return this.formatObjectCompact(ctx, depth);
+    return this.formatObjectPretty(ctx, depth);
+  }
+
+  /** @param {import('./Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
+  formatArray(ctx, depth) {
+    if (this.options.compact) return this.formatArrayCompact(ctx, depth);
+    return this.formatArrayPretty(ctx, depth);
+  }
+
+  /** @param {import('./Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
+  formatObjectCompact(ctx, depth) {
+    const openTok = ctx.start;
+    const closeTok = ctx.stop;
+    let members = ctx.member ? ctx.member() : [];
+    if (this.options.sortKeys) {
+      members = [...members].sort((a, b) =>
+        this.keySortString(a.key()).localeCompare(this.keySortString(b.key())),
+      );
+    }
+
+    const useSortAnchors = this.options.sortKeys;
+    let out = '{';
+    const openingHidden = useSortAnchors ? [] : this.hiddenRight(openTok);
+
+    if (members.length === 0) {
+      out += this.emitHiddenCompact(openingHidden);
+      out += '}';
+      return out;
+    }
+
+    if (!useSortAnchors) {
+      out += this.emitHiddenCompact(openingHidden);
+    }
+
+    let lastMemberTrailingHidden = [];
+
+    for (let i = 0; i < members.length; i++) {
+      const member = members[i];
+      const keyTok = member.key().start;
+      const valCtx = member.value();
+      const valStop = this.endToken(valCtx);
+
+      out = this.beginMemberLine(out, depth);
+
+      if (useSortAnchors) {
+        out += this.emitHiddenCompact(this.hiddenLeft(keyTok));
+      }
+
+      out += this.emitKey(member.key());
+      out += ': ';
+      out += this.formatValue(valCtx, depth + 1);
+
+      if (useSortAnchors) {
+        const trailingHidden = this.hiddenRight(valStop);
+        let trailing = this.compactWhitespace(this.emitHidden(trailingHidden));
+        if (i === members.length - 1) {
+          trailing = this.stripTrailingCommaSuffix(trailing);
+          lastMemberTrailingHidden = trailingHidden;
+        } else if (!this.containsComma(trailing)) {
+          trailing += ',';
+        }
+        out += trailing;
+      } else {
+        const boundaryTok = i < members.length - 1 ? members[i + 1].key().start : closeTok;
+        let suffix = this.compactWhitespace(this.spanBetween(valStop, boundaryTok));
+        if (i === members.length - 1) {
+          suffix = this.stripTrailingCommaSuffix(suffix);
+        }
+        out += suffix;
+      }
+    }
+
+    if (useSortAnchors) {
+      const beforeCloseHidden = this.hiddenLeft(closeTok).filter(
+        (t) => !lastMemberTrailingHidden.some((e) => e.tokenIndex === t.tokenIndex),
+      );
+      out += this.compactWhitespace(this.emitHidden(beforeCloseHidden));
+    }
+
+    out = this.beginCloseLine(out, depth);
+    out += '}';
+    return out;
+  }
+
+  /** @param {import('./Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
+  formatArrayCompact(ctx, depth) {
+    const openTok = ctx.start;
+    const closeTok = ctx.stop;
+    const values = ctx.value ? ctx.value() : [];
+
+    let out = '[';
+    const openingHidden = this.hiddenRight(openTok);
+
+    if (values.length === 0) {
+      out += this.emitHiddenCompact(openingHidden);
+      out += ']';
+      return out;
+    }
+
+    out += this.emitHiddenCompact(openingHidden);
+
+    for (let i = 0; i < values.length; i++) {
+      const valCtx = values[i];
+      const valStop = this.endToken(valCtx);
+      const boundaryTok = i < values.length - 1 ? values[i + 1].start : closeTok;
+
+      out = this.beginMemberLine(out, depth);
+      out += this.formatValue(valCtx, depth + 1);
+
+      let suffix = this.compactWhitespace(this.spanBetween(valStop, boundaryTok));
+      if (i === values.length - 1) {
+        suffix = this.stripTrailingCommaSuffix(suffix);
+      }
+      out += suffix;
+    }
+
+    out = this.beginCloseLine(out, depth);
+    out += ']';
+    return out;
+  }
+
+  /** @param {import('./Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
+  formatObjectPretty(ctx, depth) {
+    const openTok = ctx.start;
+    const closeTok = ctx.stop;
     let members = ctx.member ? ctx.member() : [];
     if (this.options.sortKeys) {
       members = [...members].sort((a, b) =>
@@ -162,13 +375,14 @@ export class FormatEmitter {
     }
 
     let out = '{';
-    out += this.emitHidden(this.hiddenRight(lbrace));
 
     if (members.length === 0) {
-      out += this.emitHidden(this.hiddenLeft(rbrace));
+      out += this.emitHidden(this.hiddenRight(openTok));
       out += '}';
       return out;
     }
+
+    let lastMemberTrailingHidden = [];
 
     for (let i = 0; i < members.length; i++) {
       const member = members[i];
@@ -185,7 +399,11 @@ export class FormatEmitter {
         out += this.formatPrimitiveValue(valCtx);
       }
       const valStop = this.endToken(valCtx);
-      out += this.emitHidden(this.hiddenRight(valStop));
+      const trailingHidden = this.hiddenRight(valStop);
+      out += this.emitHidden(trailingHidden);
+      if (i === members.length - 1) {
+        lastMemberTrailingHidden = trailingHidden;
+      }
       if (i < members.length - 1) {
         out += ',';
       }
@@ -193,25 +411,29 @@ export class FormatEmitter {
 
     out += '\n';
     out += this.indentUnit(depth);
-    out += this.emitHidden(this.hiddenLeft(rbrace));
+    const beforeCloseHidden = this.hiddenLeft(closeTok).filter(
+      (t) => !lastMemberTrailingHidden.some((e) => e.tokenIndex === t.tokenIndex),
+    );
+    out += this.emitHidden(beforeCloseHidden);
     out += '}';
     return out;
   }
 
   /** @param {import('./Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
-  formatArray(ctx, depth) {
-    const lbrack = ctx.LBRACK();
-    const rbrack = ctx.RBRACK();
+  formatArrayPretty(ctx, depth) {
+    const openTok = ctx.start;
+    const closeTok = ctx.stop;
     const values = ctx.value ? ctx.value() : [];
 
     let out = '[';
-    out += this.emitHidden(this.hiddenRight(lbrack));
 
     if (values.length === 0) {
-      out += this.emitHidden(this.hiddenLeft(rbrack));
+      out += this.emitHidden(this.hiddenRight(openTok));
       out += ']';
       return out;
     }
+
+    let lastElementTrailingHidden = [];
 
     for (let i = 0; i < values.length; i++) {
       const valCtx = values[i];
@@ -223,7 +445,11 @@ export class FormatEmitter {
       } else {
         out += this.formatPrimitiveValue(valCtx);
       }
-      out += this.emitHidden(this.hiddenRight(this.endToken(valCtx)));
+      const trailingHidden = this.hiddenRight(this.endToken(valCtx));
+      out += this.emitHidden(trailingHidden);
+      if (i === values.length - 1) {
+        lastElementTrailingHidden = trailingHidden;
+      }
       if (i < values.length - 1) {
         out += ',';
       }
@@ -231,7 +457,10 @@ export class FormatEmitter {
 
     out += '\n';
     out += this.indentUnit(depth);
-    out += this.emitHidden(this.hiddenLeft(rbrack));
+    const beforeCloseHidden = this.hiddenLeft(closeTok).filter(
+      (t) => !lastElementTrailingHidden.some((e) => e.tokenIndex === t.tokenIndex),
+    );
+    out += this.emitHidden(beforeCloseHidden);
     out += ']';
     return out;
   }

@@ -1,0 +1,272 @@
+// 顶部单行注释
+
+/**
+ * 顶部块注释
+ * 用于测试 formatter
+ */
+
+{
+   // json 测试
+  // 字符串
+  1: "数字key",
+   //dsd
+  "name": "张\n  三",
+   // 用户姓名
+
+  "names": """
+
+    ddsd
+  
+""",
+   // 和咯
+
+  // 数字
+  "age": 18,
+   // 年龄
+
+  // 浮点数
+  "score": 99.5,
+   // 分数
+
+  // 科学计数法
+  "exp": 1.23e+5,
+   // 科学计数
+
+  // 十六进制
+  "hex": 0xFF,
+   // 十六进制
+
+  // Infinity
+  "infinity": Infinity,
+   // 无限大
+
+  // NaN
+  "nan": NaN,
+   // 非数字
+
+  // true
+  "enable": true,
+   // 是否启用
+
+  // false
+  "deleted": false,
+   // 是否删除
+
+  // null
+  "remark": null,
+   // 备注
+
+  // 单引号
+  "singleQuote": "hello world",
+   // 单引号字符串
+
+  // 双引号
+  "doubleQuote": "hello world",
+   // 双引号字符串
+
+  // 空对象
+  "emptyObject": {},
+   // 空对象
+
+  // 空数组
+  "emptyArray": [],
+   // 空数组
+
+  // 对象
+  "user": {
+     // 用户对象
+
+    // id
+    "id": "1001",
+     // 用户ID
+
+    // 用户名
+    "username": "admin",
+     // 登录名
+
+    // 嵌套对象
+    "profile": {
+       // 资料对象
+
+      // 昵称
+      "nickname": "管理员",
+       // 用户昵称
+
+      /*// 地址*/
+      "address": {
+         // 地址信息 /*dsds*/
+
+        // 城市
+        "city": "北京",
+         // 城市名称
+
+        // 邮编
+        "zip": "100000" // 邮编
+      
+      }
+    
+    }
+  
+  },
+  
+
+  // 字符串数组
+  "tags": [
+     // 标签列表
+
+    // 标签1
+    "java",
+     // Java
+
+    // 标签2
+    "js",
+     // JavaScript
+
+    // 标签3
+    "antlr" // ANTLR
+  
+  ],
+  
+
+  // 数字数组
+  "numbers": [
+     // 数字列表
+
+    // 数字1
+    1,
+     // one
+
+    // 数字2
+    2,
+     // two
+
+    // 数字3
+    3 // three
+  
+  ],
+  
+
+  // 对象数组
+  "users": [
+     // 用户列表
+
+    // 用户1
+    {
+       // user1
+
+      // id
+      "id": 1,
+       // 用户ID
+
+      // name
+      "name": "张三" // 用户名
+    
+    },
+    
+
+    // 用户2
+    {
+       // user2
+
+      // id
+      "id": 2,
+       // 用户ID
+
+      // name
+      "name": "李四" // 用户名
+    
+    }
+  
+  ],
+  
+
+  // 混合数组
+  "mixArray": [
+     // 混合数组
+
+    // 字符串
+    "abc",
+     // string
+
+    // 数字
+    123,
+     // number
+
+    // bool
+    true,
+     // boolean
+
+    // null
+    null,
+     // null
+
+    // object
+    {
+       // object item
+
+      // key
+      "a": 1 // value
+    
+    },
+    
+
+    // array
+    [
+       // inner array
+
+      // item
+      1,
+       // one
+
+      // item
+      2 // two
+    
+    ]
+  
+  ],
+  
+
+  // 多行块注释对象
+  "config": {
+    
+
+    /**
+     * host 配置
+     */
+    "host": "127.0.0.1",
+     // host
+
+    /**
+     * port 配置
+     */
+    "port": 8080 // port
+  
+  },
+  
+
+  // unicode
+  "unicode": "你好",
+   // unicode字符串
+
+  // 转义字符
+  "escape": "line1\nline2\tline3",
+   // 转义测试
+
+  // 特殊 key
+  "$key": "value",
+   // $
+
+  // 下划线
+  "_private": true,
+   // private
+
+  // 中文 key
+  中文字段: "中文值",
+   // 中文key
+
+  // 末尾测试
+  "tail": "end" // 尾部字段
+
+}
+
+// 尾部注释
