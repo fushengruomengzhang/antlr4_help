@@ -21,7 +21,7 @@
 
 ### Requirement: 源码与生成代码目录布局
 
-项目 SHALL 将源码集中于 `src/`：`.g4` 语法源文件位于 `src/grammars/`（按语言分子目录，如 `json5/`、`json/`、`java8/`），由语法生成的解析器代码位于 `src/parser/` 下按语言分子目录（如 `src/parser/json5/`）并 MUST 纳入版本控制；运行时模块位于 `src/core/`、`src/json5/`、`src/json/`、`src/java8/`；统一入口位于 `src/index.js`。
+项目 SHALL 将源码集中于 `src/`：`.g4` 语法源文件位于 `src/grammars/`（按语言分子目录）；生成解析器与运行时 API 均位于 `src/parser/` 下按语言分子目录（如 `src/parser/json5/` 含 Lexer/Parser 与 validate/parse/format）；共享管线位于 `src/parser/core/`；统一入口位于 `src/index.js`。
 
 #### Scenario: 语法源文件按语言分目录
 - **WHEN** 查看 `src/grammars/`
@@ -32,8 +32,8 @@
 - **THEN** 存在 `json5/`、`json/`、`java8/` 子目录，各含对应 Lexer/Parser 文件且被 git 跟踪
 
 #### Scenario: 运行时模块存在
-- **WHEN** 查看 `src/`
-- **THEN** 存在 `core/`、`json5/`、`json/`、`java8/` 目录及 `index.js` 入口
+- **WHEN** 查看 `src/parser/`
+- **THEN** 存在 `core/`、`json5/`、`json/`、`java8/` 目录，且各语言目录含运行时 API 与生成 Lexer/Parser
 
 ### Requirement: ESM 模块风格
 

@@ -12,12 +12,12 @@ antlr4_help/
 ├── lib/antlr-4.9.3-complete.jar    # 构建期：ANTLR 生成工具（需 Java）
 ├── scripts/generate.sh             # 生成解析器
 └── src/
-    ├── core/                       # ParsePipeline、ParseError
     ├── grammars/{json5,json,java8}/  # *.g4 语法源
-    ├── parser/{json5,json,java8}/    # 生成的 Lexer/Parser（已入库）
-    ├── json5/                      # validate、parse、format
-    ├── json/                       # parse
-    ├── java8/                      # firstClassName、signatures
+    ├── parser/                       # 生成代码 + 运行时 API
+    │   ├── core/                     # ParsePipeline、ParseError
+    │   ├── json5/                  # Lexer/Parser + validate/parse/format
+    │   ├── json/                   # Lexer/Parser + parse
+    │   └── java8/                  # Lexer/Parser + signatures
     └── index.js                    # 统一导出
 ```
 

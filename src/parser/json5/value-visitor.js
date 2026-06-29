@@ -27,7 +27,7 @@ export function encodeDoubleQuotedString(value) {
   return `"${encodeJsonString(value)}"`;
 }
 
-/** @param {import('../parser/json5/Json5Parser.js').default.KeyContext} ctx */
+/** @param {import('./Json5Parser.js').default.KeyContext} ctx */
 export function keyToString(ctx) {
   if (ctx.IdentifierName()) return ctx.IdentifierName().getText();
   if (ctx.NUMBER()) return ctx.NUMBER().getText();
@@ -48,7 +48,7 @@ export function parseJson5Number(text) {
   return Number(text);
 }
 
-/** @param {import('../parser/json5/Json5Parser.js').default.ValueContext} ctx */
+/** @param {import('./Json5Parser.js').default.ValueContext} ctx */
 export function visitValue(ctx) {
   if (ctx.object()) return visitObject(ctx.object());
   if (ctx.array()) return visitArray(ctx.array());
@@ -64,7 +64,7 @@ export function visitValue(ctx) {
   throw new Error(`Unexpected value: ${ctx.getText()}`);
 }
 
-/** @param {import('../parser/json5/Json5Parser.js').default.LiteralContext} ctx */
+/** @param {import('./Json5Parser.js').default.LiteralContext} ctx */
 function visitLiteral(ctx) {
   if (ctx.INFINITY()) return Infinity;
   if (ctx.NAN()) return NaN;
@@ -77,7 +77,7 @@ function visitLiteral(ctx) {
   throw new Error(`Unexpected literal: ${ctx.getText()}`);
 }
 
-/** @param {import('../parser/json5/Json5Parser.js').default.ObjectContext} ctx */
+/** @param {import('./Json5Parser.js').default.ObjectContext} ctx */
 function visitObject(ctx) {
   const result = {};
   const members = ctx.member ? ctx.member() : [];
@@ -88,7 +88,7 @@ function visitObject(ctx) {
   return result;
 }
 
-/** @param {import('../parser/json5/Json5Parser.js').default.ArrayContext} ctx */
+/** @param {import('./Json5Parser.js').default.ArrayContext} ctx */
 function visitArray(ctx) {
   const values = ctx.value ? ctx.value() : [];
   return values.map(visitValue);

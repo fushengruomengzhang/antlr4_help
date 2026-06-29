@@ -1,5 +1,5 @@
-import JSONLexer from '../parser/json/JSONLexer.js';
-import JSONParser from '../parser/json/JSONParser.js';
+import Json5Lexer from './Json5Lexer.js';
+import Json5Parser from './Json5Parser.js';
 import { runParsePipeline } from '../core/parse-pipeline.js';
 import { visitValue } from './value-visitor.js';
 
@@ -9,11 +9,11 @@ import { visitValue } from './value-visitor.js';
  */
 export function parse(input) {
   const { tree } = runParsePipeline({
-    language: 'json',
+    language: 'json5',
     input,
-    Lexer: JSONLexer,
-    Parser: JSONParser,
-    entryRule: 'json',
+    Lexer: Json5Lexer,
+    Parser: Json5Parser,
+    entryRule: 'json5',
   });
   return visitValue(tree.value());
 }

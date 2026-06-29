@@ -84,20 +84,20 @@ export class FormatEmitter {
   }
 
   /**
-   * @param {import('../parser/json5/Json5Parser.js').default.Json5Context} root
+   * @param {import('./Json5Parser.js').default.Json5Context} root
    */
   formatDocument(root) {
     return this.formatValue(root.value(), 0).trimEnd();
   }
 
-  /** @param {import('../parser/json5/Json5Parser.js').default.ValueContext} ctx @param {number} depth */
+  /** @param {import('./Json5Parser.js').default.ValueContext} ctx @param {number} depth */
   formatValue(ctx, depth) {
     if (ctx.object()) return this.formatObject(ctx.object(), depth);
     if (ctx.array()) return this.formatArray(ctx.array(), depth);
     return this.formatPrimitiveValue(ctx);
   }
 
-  /** @param {import('../parser/json5/Json5Parser.js').default.ValueContext} ctx */
+  /** @param {import('./Json5Parser.js').default.ValueContext} ctx */
   formatPrimitiveValue(ctx) {
     if (ctx.STRING()) {
       return encodeDoubleQuotedString(decodeJson5String(ctx.STRING().getText()));
@@ -132,7 +132,7 @@ export class FormatEmitter {
     return this.formatTripleFromDecoded(decoded);
   }
 
-  /** @param {import('../parser/json5/Json5Parser.js').default.KeyContext} keyCtx */
+  /** @param {import('./Json5Parser.js').default.KeyContext} keyCtx */
   emitKey(keyCtx) {
     if (keyCtx.IdentifierName()) return keyCtx.IdentifierName().getText();
     if (keyCtx.NUMBER()) return keyCtx.NUMBER().getText();
@@ -145,12 +145,12 @@ export class FormatEmitter {
     return keyCtx.getText();
   }
 
-  /** @param {import('../parser/json5/Json5Parser.js').default.KeyContext} keyCtx */
+  /** @param {import('./Json5Parser.js').default.KeyContext} keyCtx */
   keySortString(keyCtx) {
     return keyToString(keyCtx);
   }
 
-  /** @param {import('../parser/json5/Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
+  /** @param {import('./Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
   formatObject(ctx, depth) {
     const lbrace = ctx.LBRACE();
     const rbrace = ctx.RBRACE();
@@ -198,7 +198,7 @@ export class FormatEmitter {
     return out;
   }
 
-  /** @param {import('../parser/json5/Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
+  /** @param {import('./Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
   formatArray(ctx, depth) {
     const lbrack = ctx.LBRACK();
     const rbrack = ctx.RBRACK();

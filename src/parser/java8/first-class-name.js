@@ -1,5 +1,5 @@
-import Java8Lexer from '../parser/java8/Java8Lexer.js';
-import Java8Parser from '../parser/java8/Java8Parser.js';
+import Java8Lexer from './Java8Lexer.js';
+import Java8Parser from './Java8Parser.js';
 import { runParsePipeline } from '../core/parse-pipeline.js';
 import { extractFirstClassName } from './signature-visitor.js';
 
