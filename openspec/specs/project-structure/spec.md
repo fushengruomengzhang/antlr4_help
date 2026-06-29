@@ -21,19 +21,19 @@
 
 ### Requirement: 源码与生成代码目录布局
 
-项目 SHALL 将源码集中于 `src/`：`.g4` 语法源文件位于 `src/grammars/`（按语言分子目录）；生成解析器与运行时 API 均位于 `src/parser/` 下按语言分子目录（如 `src/parser/json5/` 含 Lexer/Parser 与 validate/parse/format）；共享管线位于 `src/parser/core/`；统一入口位于 `src/index.js`。
+项目 SHALL 将源码集中于 `src/`：`.g4` 语法源文件与 ANTLR 生成解析器（Lexer/Parser）位于 `src/grammars/`（按语言分子目录）；运行时 API 位于 `src/parser/` 下按语言分子目录（如 `src/parser/json5/` 含 validate/parse/format）；共享管线位于 `src/parser/core/`；统一入口位于 `src/index.js`。
 
 #### Scenario: 语法源文件按语言分目录
 - **WHEN** 查看 `src/grammars/`
 - **THEN** 存在 `json5/`、`json/`、`java8/` 子目录且各含对应 `.g4` 文件
 
 #### Scenario: 生成代码按语言分目录入库
-- **WHEN** 执行代码生成后查看 `src/parser/`
+- **WHEN** 执行代码生成后查看 `src/grammars/`
 - **THEN** 存在 `json5/`、`json/`、`java8/` 子目录，各含对应 Lexer/Parser 文件且被 git 跟踪
 
 #### Scenario: 运行时模块存在
 - **WHEN** 查看 `src/parser/`
-- **THEN** 存在 `core/`、`json5/`、`json/`、`java8/` 目录，且各语言目录含运行时 API 与生成 Lexer/Parser
+- **THEN** 存在 `core/`、`json5/`、`json/`、`java8/` 目录，且各语言目录含运行时 API（不含 `.g4`）
 
 ### Requirement: ESM 模块风格
 
@@ -49,11 +49,11 @@
 
 ### Requirement: 可复现的代码生成
 
-项目 SHALL 提供可复现的代码生成方式：`scripts/generate.sh` MUST 调用 `lib/` 下的 ANTLR jar 以 `-Dlanguage=JavaScript` 从 `src/grammars/` 各语言子目录生成解析器到 `src/parser/` 对应子目录，并 SHALL 通过 `npm run generate` 暴露。
+项目 SHALL 提供可复现的代码生成方式：`scripts/generate.sh` MUST 调用 `lib/` 下的 ANTLR jar 以 `-Dlanguage=JavaScript` 从 `src/grammars/` 各语言子目录生成解析器到同目录，并 SHALL 通过 `npm run generate` 暴露。
 
 #### Scenario: 通过 npm 触发生成
 - **WHEN** 运行 `npm run generate`
-- **THEN** 脚本调用 `java -jar lib/antlr-4.9.3-complete.jar -Dlanguage=JavaScript` 并在 `src/parser/json5/`、`src/parser/json/`、`src/parser/java8/` 产出对应 Lexer/Parser 文件
+- **THEN** 脚本调用 `java -jar lib/antlr-4.9.3-complete.jar -Dlanguage=JavaScript` 并在 `src/grammars/json5/`、`src/grammars/json/`、`src/grammars/java8/` 产出对应 Lexer/Parser 文件
 
 ### Requirement: 端到端解析流水线
 

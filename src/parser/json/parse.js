@@ -1,5 +1,5 @@
-import JSONLexer from './JSONLexer.js';
-import JSONParser from './JSONParser.js';
+import JSONLexer from '../../grammars/json/JSONLexer.js';
+import JSONParser from '../../grammars/json/JSONParser.js';
 import { runParsePipeline } from '../core/parse-pipeline.js';
 import { visitValue } from './value-visitor.js';
 

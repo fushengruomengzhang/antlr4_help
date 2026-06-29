@@ -149,7 +149,7 @@ export class FormatEmitter {
   }
 
   /**
-   * @param {import('./Json5Parser.js').default.Json5Context} root
+   * @param {import('../../grammars/json5/Json5Parser.js').default.Json5Context} root
    */
   formatDocument(root) {
     const valueCtx = root.value();
@@ -166,14 +166,14 @@ export class FormatEmitter {
     return out.trimEnd();
   }
 
-  /** @param {import('./Json5Parser.js').default.ValueContext} ctx @param {number} depth */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.ValueContext} ctx @param {number} depth */
   formatValue(ctx, depth) {
     if (ctx.object()) return this.formatObject(ctx.object(), depth);
     if (ctx.array()) return this.formatArray(ctx.array(), depth);
     return this.options.compact ? this.emitSourceValue(ctx) : this.formatPrimitiveValue(ctx);
   }
 
-  /** @param {import('./Json5Parser.js').default.ValueContext} ctx */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.ValueContext} ctx */
   emitSourceValue(ctx) {
     if (ctx.STRING()) return ctx.STRING().getText();
     if (ctx.TRIPLE_DOUBLE_STRING()) return ctx.TRIPLE_DOUBLE_STRING().getText();
@@ -186,7 +186,7 @@ export class FormatEmitter {
     return ctx.getText();
   }
 
-  /** @param {import('./Json5Parser.js').default.ValueContext} ctx */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.ValueContext} ctx */
   formatPrimitiveValue(ctx) {
     if (ctx.STRING()) {
       return encodeDoubleQuotedString(decodeJson5String(ctx.STRING().getText()));
@@ -221,7 +221,7 @@ export class FormatEmitter {
     return this.formatTripleFromDecoded(decoded);
   }
 
-  /** @param {import('./Json5Parser.js').default.KeyContext} keyCtx */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.KeyContext} keyCtx */
   emitKey(keyCtx) {
     if (keyCtx.IdentifierName()) return keyCtx.IdentifierName().getText();
     if (keyCtx.NUMBER()) return keyCtx.NUMBER().getText();
@@ -234,24 +234,24 @@ export class FormatEmitter {
     return keyCtx.getText();
   }
 
-  /** @param {import('./Json5Parser.js').default.KeyContext} keyCtx */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.KeyContext} keyCtx */
   keySortString(keyCtx) {
     return keyToString(keyCtx);
   }
 
-  /** @param {import('./Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
   formatObject(ctx, depth) {
     if (this.options.compact) return this.formatObjectCompact(ctx, depth);
     return this.formatObjectPretty(ctx, depth);
   }
 
-  /** @param {import('./Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
   formatArray(ctx, depth) {
     if (this.options.compact) return this.formatArrayCompact(ctx, depth);
     return this.formatArrayPretty(ctx, depth);
   }
 
-  /** @param {import('./Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
   formatObjectCompact(ctx, depth) {
     const openTok = ctx.start;
     const closeTok = ctx.stop;
@@ -326,7 +326,7 @@ export class FormatEmitter {
     return out;
   }
 
-  /** @param {import('./Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
   formatArrayCompact(ctx, depth) {
     const openTok = ctx.start;
     const closeTok = ctx.stop;
@@ -363,7 +363,7 @@ export class FormatEmitter {
     return out;
   }
 
-  /** @param {import('./Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
   formatObjectPretty(ctx, depth) {
     const openTok = ctx.start;
     const closeTok = ctx.stop;
@@ -419,7 +419,7 @@ export class FormatEmitter {
     return out;
   }
 
-  /** @param {import('./Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
   formatArrayPretty(ctx, depth) {
     const openTok = ctx.start;
     const closeTok = ctx.stop;

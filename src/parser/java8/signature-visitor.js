@@ -1,4 +1,4 @@
-import Java8Parser from './Java8Parser.js';
+import Java8Parser from '../../grammars/java8/Java8Parser.js';
 import {
   parseElementValue,
   parseVariableInitializer,
@@ -14,13 +14,13 @@ import {
   parseTypeSignature,
 } from './type-parser.js';
 
-/** @param {import('./Java8Parser.js').default.DimsContext | null | undefined} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.DimsContext | null | undefined} ctx */
 function countDimensions(ctx) {
   if (!ctx) return 0;
   return ctx.LBRACK?.()?.length ?? 0;
 }
 
-/** @param {import('./Java8Parser.js').default.FieldDeclarationContext} ctx @returns {import('./models.js').FieldMemberModel[]} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.FieldDeclarationContext} ctx @returns {import('./models.js').FieldMemberModel[]} */
 function extractFields(ctx) {
   const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.fieldModifier?.() ?? []);
   const type = parseTypeSignature(ctx.unannType?.()) ?? { kind: 'primitive', name: 'void' };
@@ -43,7 +43,7 @@ function extractFields(ctx) {
   });
 }
 
-/** @param {import('./Java8Parser.js').default.MethodHeaderContext | null | undefined} header @param {import('./models.js').AnnotationMap} memberAnnotations @param {string[]} memberModifiers @param {string} name @param {'method' | 'constructor'} kind @param {import('./models.js').TypeParameterModel[] | undefined} outerTypeParameters */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.MethodHeaderContext | null | undefined} header @param {import('./models.js').AnnotationMap} memberAnnotations @param {string[]} memberModifiers @param {string} name @param {'method' | 'constructor'} kind @param {import('./models.js').TypeParameterModel[] | undefined} outerTypeParameters */
 function buildCallableMember(header, memberAnnotations, memberModifiers, name, kind, outerTypeParameters) {
   const typeParameters = parseTypeParameters(header?.typeParameters?.()) ?? outerTypeParameters;
   const parameters = parseFormalParameters(header?.methodDeclarator?.()?.formalParameterList?.());
@@ -80,7 +80,7 @@ function buildCallableMember(header, memberAnnotations, memberModifiers, name, k
   return model;
 }
 
-/** @param {import('./Java8Parser.js').default.MethodDeclarationContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.MethodDeclarationContext} ctx */
 function extractMethod(ctx) {
   const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.methodModifier?.() ?? []);
   const header = ctx.methodHeader();
@@ -88,7 +88,7 @@ function extractMethod(ctx) {
   return buildCallableMember(header, annotations, modifiers, name, 'method', undefined);
 }
 
-/** @param {import('./Java8Parser.js').default.InterfaceMethodDeclarationContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.InterfaceMethodDeclarationContext} ctx */
 function extractInterfaceMethod(ctx) {
   const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.interfaceMethodModifier?.() ?? []);
   const header = ctx.methodHeader();
@@ -96,7 +96,7 @@ function extractInterfaceMethod(ctx) {
   return buildCallableMember(header, annotations, modifiers, name, 'method', undefined);
 }
 
-/** @param {import('./Java8Parser.js').default.ConstructorDeclarationContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ConstructorDeclarationContext} ctx */
 function extractConstructor(ctx) {
   const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.constructorModifier?.() ?? []);
   const declarator = ctx.constructorDeclarator();
@@ -118,7 +118,7 @@ function extractConstructor(ctx) {
   return model;
 }
 
-/** @param {import('./Java8Parser.js').default.EnumConstantContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.EnumConstantContext} ctx */
 function extractEnumConstant(ctx) {
   const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.enumConstantModifier?.() ?? []);
   return /** @type {import('./models.js').EnumConstantMemberModel} */ ({
@@ -129,7 +129,7 @@ function extractEnumConstant(ctx) {
   });
 }
 
-/** @param {import('./Java8Parser.js').default.ConstantDeclarationContext} ctx @returns {import('./models.js').InterfaceConstantMemberModel[]} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ConstantDeclarationContext} ctx @returns {import('./models.js').InterfaceConstantMemberModel[]} */
 function extractInterfaceConstants(ctx) {
   const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.constantModifier?.() ?? []);
   const type = parseTypeSignature(ctx.unannType?.()) ?? { kind: 'primitive', name: 'void' };
@@ -152,7 +152,7 @@ function extractInterfaceConstants(ctx) {
   });
 }
 
-/** @param {import('./Java8Parser.js').default.ClassDeclarationContext} classDecl */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ClassDeclarationContext} classDecl */
 function extractFromClassDeclaration(classDecl) {
   if (classDecl.normalClassDeclaration()) {
     return extractNormalClass(classDecl.normalClassDeclaration());
@@ -163,7 +163,7 @@ function extractFromClassDeclaration(classDecl) {
   return null;
 }
 
-/** @param {import('./Java8Parser.js').default.NormalClassDeclarationContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.NormalClassDeclarationContext} ctx */
 function extractNormalClass(ctx) {
   const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.classModifier?.() ?? []);
   /** @type {import('./models.js').TypeModel} */
@@ -189,7 +189,7 @@ function extractNormalClass(ctx) {
   return model;
 }
 
-/** @param {import('./Java8Parser.js').default.EnumDeclarationContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.EnumDeclarationContext} ctx */
 function extractEnum(ctx) {
   const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.classModifier?.() ?? []);
   /** @type {import('./models.js').TypeModel} */
@@ -219,7 +219,7 @@ function extractEnum(ctx) {
   return model;
 }
 
-/** @param {import('./Java8Parser.js').default.InterfaceDeclarationContext} ifaceDecl */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.InterfaceDeclarationContext} ifaceDecl */
 function extractFromInterfaceDeclaration(ifaceDecl) {
   if (ifaceDecl.normalInterfaceDeclaration()) {
     return extractNormalInterface(ifaceDecl.normalInterfaceDeclaration());
@@ -230,7 +230,7 @@ function extractFromInterfaceDeclaration(ifaceDecl) {
   return null;
 }
 
-/** @param {import('./Java8Parser.js').default.NormalInterfaceDeclarationContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.NormalInterfaceDeclarationContext} ctx */
 function extractNormalInterface(ctx) {
   const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.interfaceModifier?.() ?? []);
   /** @type {import('./models.js').TypeModel} */
@@ -253,7 +253,7 @@ function extractNormalInterface(ctx) {
   return model;
 }
 
-/** @param {import('./Java8Parser.js').default.AnnotationTypeDeclarationContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.AnnotationTypeDeclarationContext} ctx */
 function extractAnnotationType(ctx) {
   const { annotations, modifiers } = splitAnnotationsAndModifiers(ctx.interfaceModifier?.() ?? []);
   /** @type {import('./models.js').TypeModel} */
@@ -287,7 +287,7 @@ function extractAnnotationType(ctx) {
   return model;
 }
 
-/** @param {import('./Java8Parser.js').default.AnnotationTypeElementDeclarationContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.AnnotationTypeElementDeclarationContext} ctx */
 function extractAnnotationElement(ctx) {
   const { annotations } = splitAnnotationsAndModifiers(ctx.annotationTypeElementModifier?.() ?? []);
   /** @type {import('./models.js').AnnotationElementMemberModel} */
@@ -305,7 +305,7 @@ function extractAnnotationElement(ctx) {
   return model;
 }
 
-/** @param {import('./models.js').TypeModel} model @param {import('./Java8Parser.js').default.ClassBodyContext | null | undefined} body */
+/** @param {import('./models.js').TypeModel} model @param {import('../../grammars/java8/Java8Parser.js').default.ClassBodyContext | null | undefined} body */
 function fillClassBody(model, body) {
   if (!body) return;
   const decls = body.classBodyDeclaration?.() ?? [];
@@ -314,7 +314,7 @@ function fillClassBody(model, body) {
   }
 }
 
-/** @param {import('./models.js').TypeModel} model @param {import('./Java8Parser.js').default.ClassBodyDeclarationContext} decl */
+/** @param {import('./models.js').TypeModel} model @param {import('../../grammars/java8/Java8Parser.js').default.ClassBodyDeclarationContext} decl */
 function processClassBodyDeclaration(model, decl) {
   if (decl.constructorDeclaration()) {
     model.ownMembers.push(extractConstructor(decl.constructorDeclaration()));
@@ -335,7 +335,7 @@ function processClassBodyDeclaration(model, decl) {
   }
 }
 
-/** @param {import('./models.js').TypeModel} model @param {import('./Java8Parser.js').default.InterfaceBodyContext | null | undefined} body */
+/** @param {import('./models.js').TypeModel} model @param {import('../../grammars/java8/Java8Parser.js').default.InterfaceBodyContext | null | undefined} body */
 function fillInterfaceBody(model, body) {
   if (!body) return;
   const decls = body.interfaceMemberDeclaration?.() ?? [];
@@ -354,7 +354,7 @@ function fillInterfaceBody(model, body) {
   }
 }
 
-/** @param {import('./Java8Parser.js').default.CompilationUnitContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.CompilationUnitContext} ctx */
 export function extractFileModel(ctx) {
   /** @type {import('./models.js').FileModel} */
   const file = { types: [] };
@@ -371,7 +371,7 @@ export function extractFileModel(ctx) {
   return file;
 }
 
-/** @param {import('./Java8Parser.js').default.CompilationUnitContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.CompilationUnitContext} ctx */
 export function extractFirstClassName(ctx) {
   const decls = ctx.typeDeclaration?.() ?? [];
   for (const decl of decls) {

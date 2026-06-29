@@ -1,12 +1,12 @@
 import { buildAnnotationMap, buildAnnotationMapFromAnnotations, extractAnnotationPair } from './annotation-parser.js';
 
-/** @param {import('./Java8Parser.js').default.DimsContext | null | undefined} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.DimsContext | null | undefined} ctx */
 function countDimensions(ctx) {
   if (!ctx) return 0;
   return ctx.LBRACK?.()?.length ?? 0;
 }
 
-/** @param {import('./Java8Parser.js').default.UnannTypeContext | null | undefined} @returns {import('./models.js').TypeSignature | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.UnannTypeContext | null | undefined} @returns {import('./models.js').TypeSignature | undefined} */
 export function parseTypeSignature(ctx) {
   if (!ctx) return undefined;
 
@@ -21,7 +21,7 @@ export function parseTypeSignature(ctx) {
   return undefined;
 }
 
-/** @param {import('./Java8Parser.js').default.UnannReferenceTypeContext} ctx @returns {import('./models.js').TypeSignature | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.UnannReferenceTypeContext} ctx @returns {import('./models.js').TypeSignature | undefined} */
 function parseUnannReferenceType(ctx) {
   const classType = ctx.unannClassOrInterfaceType?.();
   if (classType) return parseUnannClassOrInterfaceType(classType);
@@ -62,7 +62,7 @@ function parseUnannReferenceType(ctx) {
   return undefined;
 }
 
-/** @param {import('./Java8Parser.js').default.UnannClassOrInterfaceTypeContext} ctx @returns {import('./models.js').ClassTypeSignature | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.UnannClassOrInterfaceTypeContext} ctx @returns {import('./models.js').ClassTypeSignature | undefined} */
 function parseUnannClassOrInterfaceType(ctx) {
   const lfno =
     ctx.unannClassType_lfno_unannClassOrInterfaceType?.() ??
@@ -94,7 +94,7 @@ function parseUnannClassOrInterfaceType(ctx) {
   return result;
 }
 
-/** @param {import('./Java8Parser.js').default.ClassOrInterfaceTypeContext} ctx @returns {import('./models.js').ClassTypeSignature | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ClassOrInterfaceTypeContext} ctx @returns {import('./models.js').ClassTypeSignature | undefined} */
 function parseClassOrInterfaceType(ctx) {
   const lfno =
     ctx.classType_lfno_classOrInterfaceType?.() ?? ctx.interfaceType_lfno_classOrInterfaceType?.();
@@ -119,7 +119,7 @@ function parseClassOrInterfaceType(ctx) {
   return result;
 }
 
-/** @param {import('./Java8Parser.js').default.ClassTypeContext} ctx @returns {import('./models.js').ClassTypeSignature | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ClassTypeContext} ctx @returns {import('./models.js').ClassTypeSignature | undefined} */
 function parseClassType(ctx) {
   if (!ctx) return undefined;
 
@@ -149,7 +149,7 @@ function parseClassType(ctx) {
   return result;
 }
 
-/** @param {import('./Java8Parser.js').default.ReferenceTypeContext} ctx @returns {import('./models.js').TypeSignature | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ReferenceTypeContext} ctx @returns {import('./models.js').TypeSignature | undefined} */
 function parseReferenceType(ctx) {
   if (!ctx) return undefined;
 
@@ -189,7 +189,7 @@ function parseReferenceType(ctx) {
   return undefined;
 }
 
-/** @param {import('./Java8Parser.js').default.TypeArgumentsContext | null | undefined} @returns {import('./models.js').TypeSignature[] | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.TypeArgumentsContext | null | undefined} @returns {import('./models.js').TypeSignature[] | undefined} */
 function parseTypeArguments(ctx) {
   if (!ctx) return undefined;
   const args = ctx.typeArgumentList?.()?.typeArgument?.() ?? [];
@@ -204,7 +204,7 @@ function parseTypeArguments(ctx) {
   return result.length ? result : undefined;
 }
 
-/** @param {import('./Java8Parser.js').default.TypeArgumentContext} ctx @returns {import('./models.js').TypeSignature | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.TypeArgumentContext} ctx @returns {import('./models.js').TypeSignature | undefined} */
 function parseTypeArgument(ctx) {
   const wildcard = ctx.wildcard?.();
   if (wildcard) return parseWildcard(wildcard);
@@ -215,7 +215,7 @@ function parseTypeArgument(ctx) {
   return undefined;
 }
 
-/** @param {import('./Java8Parser.js').default.WildcardContext} ctx @returns {import('./models.js').WildcardTypeSignature} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.WildcardContext} ctx @returns {import('./models.js').WildcardTypeSignature} */
 function parseWildcard(ctx) {
   /** @type {import('./models.js').WildcardTypeSignature} */
   const result = { kind: 'wildcard' };
@@ -236,7 +236,7 @@ function parseWildcard(ctx) {
   return result;
 }
 
-/** @param {import('./Java8Parser.js').default.TypeParametersContext | null | undefined} @returns {import('./models.js').TypeParameterModel[] | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.TypeParametersContext | null | undefined} @returns {import('./models.js').TypeParameterModel[] | undefined} */
 export function parseTypeParameters(ctx) {
   if (!ctx) return undefined;
   const params = ctx.typeParameterList?.()?.typeParameter?.() ?? [];
@@ -244,7 +244,7 @@ export function parseTypeParameters(ctx) {
   return params.map(parseTypeParameter).filter(Boolean);
 }
 
-/** @param {import('./Java8Parser.js').default.TypeParameterContext} ctx @returns {import('./models.js').TypeParameterModel} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.TypeParameterContext} ctx @returns {import('./models.js').TypeParameterModel} */
 export function parseTypeParameter(ctx) {
   /** @type {import('./models.js').TypeParameterModel} */
   const model = {
@@ -270,12 +270,12 @@ export function parseTypeParameter(ctx) {
   return model;
 }
 
-/** @param {import('./Java8Parser.js').default.TypeParameterModifierContext[]} modifiers @returns {import('./models.js').AnnotationMap} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.TypeParameterModifierContext[]} modifiers @returns {import('./models.js').AnnotationMap} */
 export function parseTypeParameterAnnotations(modifiers) {
   return buildAnnotationMap(modifiers);
 }
 
-/** @param {import('./Java8Parser.js').default.TypeBoundContext} ctx @returns {import('./models.js').TypeParameterBound | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.TypeBoundContext} ctx @returns {import('./models.js').TypeParameterBound | undefined} */
 function parseTypeBound(ctx) {
   const typeVar = ctx.typeVariable?.();
   if (typeVar) {
@@ -306,13 +306,13 @@ function parseTypeBound(ctx) {
   return undefined;
 }
 
-/** @param {import('./Java8Parser.js').default.SuperclassContext | null | undefined} @returns {import('./models.js').TypeSignature | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.SuperclassContext | null | undefined} @returns {import('./models.js').TypeSignature | undefined} */
 export function parseExtendsType(ctx) {
   if (!ctx) return undefined;
   return parseClassType(ctx.classType?.());
 }
 
-/** @param {import('./Java8Parser.js').default.SuperinterfacesContext | import('./Java8Parser.js').default.ExtendsInterfacesContext | null | undefined} @returns {import('./models.js').TypeSignature[] | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.SuperinterfacesContext | import('../../grammars/java8/Java8Parser.js').default.ExtendsInterfacesContext | null | undefined} @returns {import('./models.js').TypeSignature[] | undefined} */
 export function parseImplementsTypes(ctx) {
   if (!ctx) return undefined;
   const list = ctx.interfaceTypeList?.()?.interfaceType?.() ?? [];
@@ -327,7 +327,7 @@ export function parseImplementsTypes(ctx) {
   return result.length ? result : undefined;
 }
 
-/** @param {import('./Java8Parser.js').default.Throws_Context | null | undefined} @returns {import('./models.js').TypeSignature[] | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.Throws_Context | null | undefined} @returns {import('./models.js').TypeSignature[] | undefined} */
 export function parseThrowsTypes(ctx) {
   if (!ctx) return undefined;
   const types = ctx.exceptionTypeList?.()?.exceptionType?.() ?? [];
@@ -350,7 +350,7 @@ export function parseThrowsTypes(ctx) {
   return result.length ? result : undefined;
 }
 
-/** @param {import('./Java8Parser.js').default.FormalParameterListContext | null | undefined} @returns {import('./models.js').ParameterModel[]} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.FormalParameterListContext | null | undefined} @returns {import('./models.js').ParameterModel[]} */
 export function parseFormalParameters(ctx) {
   if (!ctx) return [];
 
@@ -381,7 +381,7 @@ export function parseFormalParameters(ctx) {
   return parameters;
 }
 
-/** @param {import('./Java8Parser.js').default.ReceiverParameterContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ReceiverParameterContext} ctx */
 function parseReceiverParameter(ctx) {
   const { annotations, modifiers } = splitParameterAnnotations(ctx.annotation?.() ?? []);
   return {
@@ -392,7 +392,7 @@ function parseReceiverParameter(ctx) {
   };
 }
 
-/** @param {import('./Java8Parser.js').default.FormalParameterContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.FormalParameterContext} ctx */
 function parseFormalParameter(ctx) {
   const { annotations, modifiers } = splitVariableModifiers(ctx.variableModifier?.() ?? []);
   return {
@@ -403,7 +403,7 @@ function parseFormalParameter(ctx) {
   };
 }
 
-/** @param {import('./Java8Parser.js').default.LastFormalParameterContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.LastFormalParameterContext} ctx */
 function parseVarargsParameter(ctx) {
   const { annotations, modifiers } = splitVariableModifiers(ctx.variableModifier?.() ?? []);
   for (const ann of ctx.annotation?.() ?? []) {
@@ -419,12 +419,12 @@ function parseVarargsParameter(ctx) {
   };
 }
 
-/** @param {import('./Java8Parser.js').default.AnnotationContext[]} annotationCtxs */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.AnnotationContext[]} annotationCtxs */
 function splitParameterAnnotations(annotationCtxs) {
   return { annotations: buildAnnotationMapFromAnnotations(annotationCtxs), modifiers: [] };
 }
 
-/** @param {import('./Java8Parser.js').default.VariableModifierContext[]} modifierCtxs */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.VariableModifierContext[]} modifierCtxs */
 function splitVariableModifiers(modifierCtxs) {
   /** @type {string[]} */
   const modifiers = [];
@@ -435,7 +435,7 @@ function splitVariableModifiers(modifierCtxs) {
   return { annotations: buildAnnotationMap(modifierCtxs), modifiers };
 }
 
-/** @param {import('./Java8Parser.js').default.ResultContext | null | undefined} @returns {import('./models.js').TypeSignature} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ResultContext | null | undefined} @returns {import('./models.js').TypeSignature} */
 export function parseReturnType(ctx) {
   if (!ctx) return { kind: 'void' };
   if (ctx.VOID?.()) return { kind: 'void' };

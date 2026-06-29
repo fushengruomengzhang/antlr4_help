@@ -1,5 +1,5 @@
-import Json5Lexer from './Json5Lexer.js';
-import Json5Parser from './Json5Parser.js';
+import Json5Lexer from '../../grammars/json5/Json5Lexer.js';
+import Json5Parser from '../../grammars/json5/Json5Parser.js';
 import { runParsePipeline } from '../core/parse-pipeline.js';
 
 /**

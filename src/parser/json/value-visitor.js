@@ -1,7 +1,7 @@
 import { decodeJsonString } from './string-utils.js';
 
 /**
- * @param {import('./JSONParser.js').default.ValueContext} ctx
+ * @param {import('../../grammars/json/JSONParser.js').default.ValueContext} ctx
  */
 export function visitValue(ctx) {
   if (ctx.STRING()) {
@@ -24,7 +24,7 @@ export function visitValue(ctx) {
 }
 
 /**
- * @param {import('./JSONParser.js').default.ObjContext} ctx
+ * @param {import('../../grammars/json/JSONParser.js').default.ObjContext} ctx
  */
 function visitObj(ctx) {
   const result = Object.create(null);
@@ -37,7 +37,7 @@ function visitObj(ctx) {
 }
 
 /**
- * @param {import('./JSONParser.js').default.ArrContext} ctx
+ * @param {import('../../grammars/json/JSONParser.js').default.ArrContext} ctx
  */
 function visitArr(ctx) {
   const values = ctx.value ? ctx.value() : [];

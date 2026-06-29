@@ -1,6 +1,6 @@
 import antlr4 from 'antlr4';
 
-/** @param {import('./Java8Parser.js').default.TypeNameContext | null | undefined} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.TypeNameContext | null | undefined} ctx */
 export function typeNameSimpleName(ctx) {
   if (!ctx) return '';
   const id = ctx.Identifier();
@@ -8,7 +8,7 @@ export function typeNameSimpleName(ctx) {
   return ctx.getText().split('.').pop() ?? '';
 }
 
-/** @param {import('./Java8Parser.js').default.AnnotationContext} ctx @returns {[string, import('./models.js').AnnotationAttrs]} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.AnnotationContext} ctx @returns {[string, import('./models.js').AnnotationAttrs]} */
 export function extractAnnotationPair(ctx) {
   const normal = ctx.normalAnnotation?.();
   if (normal) {
@@ -36,7 +36,7 @@ export function extractAnnotationPair(ctx) {
   return ['', {}];
 }
 
-/** @param {import('./Java8Parser.js').default.NormalAnnotationContext} ctx @returns {[string, import('./models.js').AnnotationAttrs]} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.NormalAnnotationContext} ctx @returns {[string, import('./models.js').AnnotationAttrs]} */
 function extractNormalAnnotationPair(ctx) {
   /** @type {import('./models.js').AnnotationAttrs} */
   const attrs = {};
@@ -52,7 +52,7 @@ function extractNormalAnnotationPair(ctx) {
   return [typeNameSimpleName(ctx.typeName()), attrs];
 }
 
-/** @param {import('./Java8Parser.js').default.AnnotationContext[]} annotationCtxs @returns {import('./models.js').AnnotationMap} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.AnnotationContext[]} annotationCtxs @returns {import('./models.js').AnnotationMap} */
 export function buildAnnotationMapFromAnnotations(annotationCtxs) {
   /** @type {import('./models.js').AnnotationMap} */
   const map = {};
@@ -93,7 +93,7 @@ export function splitAnnotationsAndModifiers(modifierCtxs) {
   };
 }
 
-/** @param {import('./Java8Parser.js').default.ElementValueContext | null | undefined} ctx @returns {import('./models.js').AnnotationValue | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ElementValueContext | null | undefined} ctx @returns {import('./models.js').AnnotationValue | undefined} */
 export function parseElementValue(ctx) {
   if (!ctx) return undefined;
 
@@ -113,7 +113,7 @@ export function parseElementValue(ctx) {
   return undefined;
 }
 
-/** @param {import('./Java8Parser.js').default.ElementValueArrayInitializerContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ElementValueArrayInitializerContext} ctx */
 function parseElementValueArray(ctx) {
   const values = ctx.elementValueList()?.elementValue?.() ?? [];
   /** @type {import('./models.js').AnnotationValue[]} */
@@ -127,7 +127,7 @@ function parseElementValueArray(ctx) {
   return result;
 }
 
-/** @param {import('./Java8Parser.js').default.VariableInitializerContext | null | undefined} ctx @returns {import('./models.js').AnnotationValue | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.VariableInitializerContext | null | undefined} ctx @returns {import('./models.js').AnnotationValue | undefined} */
 export function parseVariableInitializer(ctx) {
   if (!ctx) return undefined;
 
@@ -140,7 +140,7 @@ export function parseVariableInitializer(ctx) {
   return undefined;
 }
 
-/** @param {import('./Java8Parser.js').default.ArrayInitializerContext} ctx */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.ArrayInitializerContext} ctx */
 function parseArrayInitializer(ctx) {
   const inits = ctx.variableInitializerList()?.variableInitializer?.() ?? [];
   /** @type {import('./models.js').AnnotationValue[]} */
@@ -156,7 +156,7 @@ function parseArrayInitializer(ctx) {
 
 /** @param {import('antlr4').ParserRuleContext} ctx @returns {import('./models.js').AnnotationValue | undefined} */
 function findLiteralInExpression(ctx) {
-  /** @type {import('./Java8Parser.js').default.LiteralContext | null} */
+  /** @type {import('../../grammars/java8/Java8Parser.js').default.LiteralContext | null} */
   let literal = null;
   let blocked = false;
 
@@ -177,7 +177,7 @@ function findLiteralInExpression(ctx) {
       return;
     }
     if (name === 'LiteralContext') {
-      literal = /** @type {import('./Java8Parser.js').default.LiteralContext} */ (node);
+      literal = /** @type {import('../../grammars/java8/Java8Parser.js').default.LiteralContext} */ (node);
       return;
     }
     for (let i = 0; i < node.getChildCount(); i++) {
@@ -193,7 +193,7 @@ function findLiteralInExpression(ctx) {
   return parseLiteral(literal);
 }
 
-/** @param {import('./Java8Parser.js').default.LiteralContext} ctx @returns {import('./models.js').AnnotationValue | undefined} */
+/** @param {import('../../grammars/java8/Java8Parser.js').default.LiteralContext} ctx @returns {import('./models.js').AnnotationValue | undefined} */
 function parseLiteral(ctx) {
   const str = ctx.StringLiteral?.();
   if (str) {

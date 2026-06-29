@@ -12,12 +12,12 @@ antlr4_help/
 ├── lib/antlr-4.9.3-complete.jar    # 构建期：ANTLR 生成工具（需 Java）
 ├── scripts/generate.sh             # 生成解析器
 └── src/
-    ├── grammars/{json5,json,java8}/  # *.g4 语法源
-    ├── parser/                       # 生成代码 + 运行时 API
+    ├── grammars/{json5,json,java8}/  # *.g4 语法源 + ANTLR 生成物（Lexer/Parser）
+    ├── parser/                       # 运行时 API
     │   ├── core/                     # ParsePipeline、ParseError
-    │   ├── json5/                  # Lexer/Parser + validate/parse/format
-    │   ├── json/                   # Lexer/Parser + parse
-    │   └── java8/                  # Lexer/Parser + signatures
+    │   ├── json5/                  # validate/parse/format
+    │   ├── json/                   # parse
+    │   └── java8/                  # signatures
     └── index.js                    # 统一导出
 ```
 
@@ -71,5 +71,5 @@ java8.signatures(javaSource);                   // → FileModel
 
 ## 说明
 
-- 修改语法后请 `npm run generate` 并提交 `src/parser/`。
+- 修改语法后请 `npm run generate` 并提交 `src/grammars/` 下对应语言的生成物。
 - `json5.parse` 不保留注释；需保留注释请用 `json5.format`。
