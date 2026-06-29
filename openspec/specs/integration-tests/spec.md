@@ -217,6 +217,16 @@ The integration runner SHALL process `test/resources/test.java.text` with `java8
 - **WHEN** `toApiSchema` throws (e.g. missing root class)
 - **THEN** the case fails and no `test.java.api.json` is written under `test/resources/out/`
 
+#### Scenario: UserP inherits User fields in structure
+
+- **WHEN** `toApiSchema` runs on `test.java.text` for root `User`
+- **THEN** structure golden 中 `userDetail.userP`（或等价路径）下含来自 `User` 的 field 节点（如 `name`）及 `UserP` 自有 field（如 `id`）
+
+#### Scenario: Self-ref child excludes nested child
+
+- **WHEN** `toApiSchema` runs on `test.java.text` for root `User`
+- **THEN** `child` List 模板内层 `User` 节点含 `name` 等 field，但 **不含** 嵌套 `child` 字段节点
+
 ### Requirement: Runner continues on per-case errors
 
 If a single case fails (API error, assertion failure, or golden mismatch), the runner SHALL log the failure to stderr and continue remaining cases. SHALL NOT write `*.error.json` sidecar files under `test/resources/out/`.

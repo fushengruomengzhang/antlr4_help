@@ -90,7 +90,25 @@ function collectApiIds(nodes, ids = []) {
 function findRootField(nodes, key) {
   const hit = nodes.find((n) => /** @type {{ key?: string }} */ (n).key === key);
   if (!hit) throw new Error(`field not found: ${key}`);
-  return /** @type {{ check?: boolean }} */ (hit);
+  return /** @type {{ check?: boolean, children?: unknown[] }} */ (hit);
+}
+
+/** @param {unknown[]} nodes @param {Array<string | number>} path */
+function findApiPath(nodes, path) {
+  /** @type {unknown[]} */
+  let cur = nodes;
+  for (const step of path) {
+    if (typeof step === 'number') {
+      const node = cur[step];
+      if (!node) throw new Error(`path index not found: ${step}`);
+      cur = /** @type {{ children?: unknown[] }} */ (node).children ?? [];
+      continue;
+    }
+    const node = cur.find((n) => /** @type {{ key?: string }} */ (n).key === step);
+    if (!node) throw new Error(`path key not found: ${step}`);
+    cur = /** @type {{ children?: unknown[] }} */ (node).children ?? [];
+  }
+  return cur;
 }
 
 /**
@@ -227,6 +245,17 @@ runCase(
       }
       if (findRootField(nodes, 'age').check !== false) {
         throw new Error('age field check must be false');
+      }
+      const userPChildren = findApiPath(nodes, ['userDetail', 'userP']);
+      if (!userPChildren.some((n) => /** @type {{ key?: string }} */ (n).key === 'name')) {
+        throw new Error('userP must inherit User field name');
+      }
+      if (!userPChildren.some((n) => /** @type {{ key?: string }} */ (n).key === 'id')) {
+        throw new Error('userP must include own field id');
+      }
+      const nestedChildUser = findApiPath(nodes, ['child', 0, 'child', 0]);
+      if (nestedChildUser.some((n) => /** @type {{ key?: string }} */ (n).key === 'child')) {
+        throw new Error('nested User in child must not include child field');
       }
     },
   },

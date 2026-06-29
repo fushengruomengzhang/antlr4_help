@@ -1,4 +1,5 @@
 import { snowflakeId } from '../core/snowflake-id.js';
+import { effectiveFields, fieldReferencesType, fieldReferencesTypeInPath } from './effective-fields.js';
 import { firstClassName } from './first-class-name.js';
 import { signatures } from './signatures.js';
 import { typeSignatureToParsed } from './type-to-parsed.js';
@@ -68,9 +69,10 @@ function apiTypeName(parsed) {
  * @param {import('./models.js').AnnotationMap} fieldAnnotations
  * @param {number | undefined} index
  * @param {string[]} path
+ * @param {string | undefined} [fromType]
  * @returns {ApiSchemaNode}
  */
-export function buildNode(key, parsed, classMap, parentId, fieldAnnotations, index, path = []) {
+export function buildNode(key, parsed, classMap, parentId, fieldAnnotations, index, path = [], fromType) {
   const id = snowflakeId();
   const { desc: fieldDesc, required } = getApiModelProperty(fieldAnnotations);
 
@@ -101,31 +103,46 @@ export function buildNode(key, parsed, classMap, parentId, fieldAnnotations, ind
   }
 
   if (parsed.kind === 'object') {
-    if (path.includes(parsed.type)) {
+    const clazz = classMap[parsed.type];
+    if (!clazz) {
       return node;
     }
-    const clazz = classMap[parsed.type];
-    if (clazz) {
-      node.children = clazz.ownMembers
-        .filter((m) => m.kind === 'field')
-        .map((f) =>
-          buildNode(
-            f.name,
-            typeSignatureToParsed(f.type),
-            classMap,
-            id,
-            f.annotations,
-            undefined,
-            [...path, parsed.type],
-          ),
-        );
+
+    const isCycle = path.includes(parsed.type);
+    if (isCycle && !fromType) {
+      return node;
     }
+
+    let fields = effectiveFields(parsed.type, classMap);
+    if (isCycle && fromType) {
+      fields = fields.filter(
+        (f) =>
+          !fieldReferencesType(f.type, fromType) && !fieldReferencesTypeInPath(f.type, path),
+      );
+    }
+    if (fields.length === 0) {
+      return node;
+    }
+
+    const nextPath = isCycle ? path : [...path, parsed.type];
+    node.children = fields.map((f) =>
+      buildNode(
+        f.name,
+        typeSignatureToParsed(f.type),
+        classMap,
+        id,
+        f.annotations,
+        undefined,
+        nextPath,
+        parsed.type,
+      ),
+    );
     return node;
   }
 
   if (parsed.kind === 'list' || parsed.kind === 'map') {
     node.children = [
-      buildNode(undefined, parsed.inner, classMap, id, {}, 0, path),
+      buildNode(undefined, parsed.inner, classMap, id, {}, 0, path, fromType),
     ];
   }
 
@@ -159,7 +176,7 @@ export function toApiSchema(inputs, options = {}) {
     throw new Error(`toApiSchema: root class not found: ${rootName}`);
   }
 
-  return root.ownMembers
-    .filter((m) => m.kind === 'field')
-    .map((f) => buildNode(f.name, typeSignatureToParsed(f.type), classMap, 0, f.annotations));
+  return effectiveFields(rootName, classMap).map((f) =>
+    buildNode(f.name, typeSignatureToParsed(f.type), classMap, 0, f.annotations),
+  );
 }
