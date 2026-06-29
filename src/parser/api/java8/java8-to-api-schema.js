@@ -1,7 +1,7 @@
-import { snowflakeId } from '../core/snowflake-id.js';
+import { snowflakeId } from '../snowflake-id.js';
 import { effectiveFields, fieldReferencesType, fieldReferencesTypeInPath } from './effective-fields.js';
-import { firstClassName } from './first-class-name.js';
-import { signatures } from './signatures.js';
+import { firstClassName } from '../../java8/first-class-name.js';
+import { signatures } from '../../java8/signatures.js';
 import { typeSignatureToParsed } from './type-to-parsed.js';
 
 /**
@@ -17,11 +17,11 @@ import { typeSignatureToParsed } from './type-to-parsed.js';
  */
 
 /**
- * @param {import('./models.js').FileModel[]} fileModels
- * @returns {Record<string, import('./models.js').TypeModel>}
+ * @param {import('../../java8/models.js').FileModel[]} fileModels
+ * @returns {Record<string, import('../../java8/models.js').TypeModel>}
  */
 export function buildClassMap(fileModels) {
-  /** @type {Record<string, import('./models.js').TypeModel>} */
+  /** @type {Record<string, import('../../java8/models.js').TypeModel>} */
   const map = {};
   for (const fm of fileModels) {
     for (const t of fm.types) {
@@ -32,7 +32,7 @@ export function buildClassMap(fileModels) {
 }
 
 /**
- * @param {import('./models.js').TypeModel | undefined} clazz
+ * @param {import('../../java8/models.js').TypeModel | undefined} clazz
  * @returns {string | undefined}
  */
 function getApiModelDesc(clazz) {
@@ -41,7 +41,7 @@ function getApiModelDesc(clazz) {
 }
 
 /**
- * @param {import('./models.js').AnnotationMap} annotations
+ * @param {import('../../java8/models.js').AnnotationMap} annotations
  */
 function getApiModelProperty(annotations) {
   const api = annotations?.ApiModelProperty;
@@ -64,9 +64,9 @@ function apiTypeName(parsed) {
 /**
  * @param {string | undefined} key
  * @param {import('./type-to-parsed.js').ParsedType} parsed
- * @param {Record<string, import('./models.js').TypeModel>} classMap
+ * @param {Record<string, import('../../java8/models.js').TypeModel>} classMap
  * @param {string | number} parentId
- * @param {import('./models.js').AnnotationMap} fieldAnnotations
+ * @param {import('../../java8/models.js').AnnotationMap} fieldAnnotations
  * @param {number | undefined} index
  * @param {string[]} path
  * @param {string | undefined} [fromType]
@@ -154,10 +154,10 @@ export function buildNode(key, parsed, classMap, parentId, fieldAnnotations, ind
  * @param {{ rootClass?: string }} [options]
  * @returns {ApiSchemaNode[]}
  */
-export function toApiSchema(inputs, options = {}) {
+export function java8ToApiSchema(inputs, options = {}) {
   const codes = Array.isArray(inputs) ? inputs : [inputs];
   if (codes.length === 0) {
-    throw new Error('toApiSchema: inputs must not be empty');
+    throw new Error('java8ToApiSchema: inputs must not be empty');
   }
 
   const fileModels = codes.map((code) => signatures(code));
@@ -168,12 +168,12 @@ export function toApiSchema(inputs, options = {}) {
     rootName = firstClassName(codes[0]) ?? undefined;
   }
   if (!rootName) {
-    throw new Error('toApiSchema: cannot determine root class name');
+    throw new Error('java8ToApiSchema: cannot determine root class name');
   }
 
   const root = classMap[rootName];
   if (!root) {
-    throw new Error(`toApiSchema: root class not found: ${rootName}`);
+    throw new Error(`java8ToApiSchema: root class not found: ${rootName}`);
   }
 
   return effectiveFields(rootName, classMap).map((f) =>

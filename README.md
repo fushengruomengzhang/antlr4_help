@@ -17,7 +17,8 @@ antlr4_help/
     │   ├── core/                     # ParsePipeline、ParseError
     │   ├── json5/                  # validate/parse/format
     │   ├── json/                   # parse
-    │   └── java8/                  # signatures
+    │   ├── java8/                  # signatures
+    │   └── api/                    # Model → ApiSchema 等转换
     └── index.js                    # 统一导出
 ```
 
@@ -38,7 +39,7 @@ npm run generate             # 修改 .g4 后重新生成
 ## API
 
 ```javascript
-import { json5, json, java8, ParseError } from './src/index.js';
+import { json5, json, java8, api, ParseError } from './src/index.js';
 
 // JSON5
 json5.validate('{ a: 1, }');           // void | ParseError
@@ -55,6 +56,10 @@ json.parse('{"a":1}');
 // Java8（完整文件）
 java8.firstClassName('public class Foo { }');  // → "Foo"
 java8.signatures(javaSource);                   // → FileModel
+
+// ApiSchema（Java8 Model → 字段树）
+api.java8ToApiSchema(javaSource, { rootClass: 'User' });
+api.snowflakeId();                              // ApiSchema 节点 id
 ```
 
 ### ParseError

@@ -9,7 +9,7 @@ import { resolveBaseType } from './base-type-map.js';
  */
 
 /**
- * @param {import('./models.js').TypeSignature} sig
+ * @param {import('../../java8/models.js').TypeSignature} sig
  * @returns {ParsedType}
  */
 export function typeSignatureToParsed(sig) {

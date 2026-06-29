@@ -3,12 +3,12 @@ import { parse as jsonParse } from './parser/json/parse.js';
 import { validate as json5Validate } from './parser/json5/validate.js';
 import { parse as json5Parse } from './parser/json5/parse.js';
 import { format as json5Format, DEFAULT_FORMAT_OPTIONS } from './parser/json5/format.js';
-import { snowflakeId } from './parser/core/snowflake-id.js';
+import { snowflakeId } from './parser/api/snowflake-id.js';
+import { java8ToApiSchema } from './parser/api/java8/java8-to-api-schema.js';
 import { firstClassName } from './parser/java8/first-class-name.js';
 import { signatures } from './parser/java8/signatures.js';
-import { toApiSchema } from './parser/java8/to-api-schema.js';
 
-export { ParseError, DEFAULT_FORMAT_OPTIONS, snowflakeId };
+export { ParseError, DEFAULT_FORMAT_OPTIONS };
 
 export const json5 = {
   validate: json5Validate,
@@ -23,5 +23,9 @@ export const json = {
 export const java8 = {
   firstClassName,
   signatures,
-  toApiSchema,
+};
+
+export const api = {
+  snowflakeId,
+  java8ToApiSchema,
 };

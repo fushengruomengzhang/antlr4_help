@@ -97,6 +97,21 @@ The runner SHALL support additional fixtures under `test/resources/cases/` for f
 - **WHEN** `json5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-compact.text`
 - **THEN** the case passes assert checks that each member value appears exactly once and `// about b` is preserved
 
+#### Scenario: Sort inline comment comma before comment
+
+- **WHEN** `json5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-inline-comment.text`
+- **THEN** the case passes asserting output includes `"age": 18, // 年龄`
+
+#### Scenario: Sort compact opening comment assert
+
+- **WHEN** `json5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-compact-opening.text`
+- **THEN** the case passes asserting output includes `{ // head`
+
+#### Scenario: Sort compact no blank lines assert
+
+- **WHEN** `json5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-compact-no-blank.text`
+- **THEN** the case passes asserting output does not contain `\n\n`
+
 #### Scenario: Invalid JSON5 expectError
 
 - **WHEN** `json5.validate` is called on `cases/json5.invalid.text`
@@ -144,6 +159,7 @@ The runner SHALL process `test/resources/test.json5.text` with json5 APIs and pr
 
 - **WHEN** json5.format is called with `{ sortKeys: true, compact: true }` on `test.json5.text`
 - **THEN** the runner writes the formatted string to `test/resources/out/test.json5.format.sorted.text`
+- **AND** sorted output for fields that had inline trailing comments in input SHOULD use `, // comment` on the same line as the value where compact golden does (e.g. `"age": 18, // 年龄`)
 
 #### Scenario: JSON5 format with compact golden
 
@@ -190,11 +206,11 @@ The runner SHALL process `test/resources/test.java.text` with java8 APIs.
 
 ### Requirement: Java8 toApiSchema fixture coverage
 
-The integration runner SHALL process `test/resources/test.java.text` with `java8.toApiSchema` and validate output via structure assertions (MUST NOT compare `id` or `parentId` values against golden).
+The integration runner SHALL process `test/resources/test.java.text` with `api.java8ToApiSchema` and validate output via structure assertions (MUST NOT compare `id` or `parentId` values against golden).
 
 #### Scenario: toApiSchema writes inspectable output
 
-- **WHEN** `java8.toApiSchema` succeeds on `test.java.text` with `{ rootClass: 'User' }` (or equivalent default root)
+- **WHEN** `api.java8ToApiSchema` succeeds on `test.java.text` with `{ rootClass: 'User' }` (or equivalent default root)
 - **THEN** the runner writes pretty-printed JSON to `test/resources/out/test.java.api.json`
 
 #### Scenario: Structure golden match
@@ -204,27 +220,27 @@ The integration runner SHALL process `test/resources/test.java.text` with `java8
 
 #### Scenario: Id uniqueness assert
 
-- **WHEN** `toApiSchema` succeeds on `test.java.text`
+- **WHEN** `api.java8ToApiSchema` succeeds on `test.java.text`
 - **THEN** the case `assert` callback verifies every node has non-empty string `id` and all collected ids are unique
 
 #### Scenario: check semantics on fixture
 
-- **WHEN** `toApiSchema` runs on `test.java.text` for root `User`
+- **WHEN** `api.java8ToApiSchema` runs on `test.java.text` for root `User`
 - **THEN** the `name` field node has `check: true` and the `age` field node has `check: false`
 
 #### Scenario: toApiSchema failure no out write
 
-- **WHEN** `toApiSchema` throws (e.g. missing root class)
+- **WHEN** `api.java8ToApiSchema` throws (e.g. missing root class)
 - **THEN** the case fails and no `test.java.api.json` is written under `test/resources/out/`
 
 #### Scenario: UserP inherits User fields in structure
 
-- **WHEN** `toApiSchema` runs on `test.java.text` for root `User`
+- **WHEN** `api.java8ToApiSchema` runs on `test.java.text` for root `User`
 - **THEN** structure golden 中 `userDetail.userP`（或等价路径）下含来自 `User` 的 field 节点（如 `name`）及 `UserP` 自有 field（如 `id`）
 
 #### Scenario: Self-ref child excludes nested child
 
-- **WHEN** `toApiSchema` runs on `test.java.text` for root `User`
+- **WHEN** `api.java8ToApiSchema` runs on `test.java.text` for root `User`
 - **THEN** `child` List 模板内层 `User` 节点含 `name` 等 field，但 **不含** 嵌套 `child` 字段节点
 
 ### Requirement: Runner continues on per-case errors

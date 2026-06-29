@@ -1,7 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { json, json5, java8, ParseError } from '../src/index.js';
+import { json, json5, java8, api, ParseError } from '../src/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const resourcesDir = join(__dirname, 'resources');
@@ -222,9 +222,9 @@ runCase('java8 firstClassName', 'test.java.firstClassName.txt', () => java8.firs
 runCase('java8 signatures', 'test.java.signatures.json', () => java8.signatures(javaInput));
 
 runCase(
-  'java8 toApiSchema',
+  'api java8ToApiSchema',
   'test.java.api.json',
-  () => java8.toApiSchema(javaInput, { rootClass: 'User' }),
+  () => api.java8ToApiSchema(javaInput, { rootClass: 'User' }),
   {
     assert: (result) => {
       const nodes = /** @type {unknown[]} */ (result);
@@ -276,6 +276,48 @@ runCase(
       }
       if (!text.includes('about b')) {
         throw new Error('expected comment "// about b" to be preserved');
+      }
+    },
+  },
+);
+
+runCase(
+  'json5 format sort inline comment (case)',
+  'cases.json5.sort-inline-comment.text',
+  () => json5.format(readCase('json5.sort-inline-comment.text'), { sortKeys: true, compact: true }),
+  {
+    assert: (result) => {
+      const text = String(result);
+      if (!text.includes('"age": 18, // 年龄')) {
+        throw new Error('expected inline comment on age member as \'"age": 18, // 年龄\'');
+      }
+    },
+  },
+);
+
+runCase(
+  'json5 format sort compact opening (case)',
+  'cases.json5.sort-compact-opening.text',
+  () => json5.format(readCase('json5.sort-compact-opening.text'), { sortKeys: true, compact: true }),
+  {
+    assert: (result) => {
+      const text = String(result);
+      if (!text.includes('{ // head')) {
+        throw new Error('expected container opening comment on same line as "{"');
+      }
+    },
+  },
+);
+
+runCase(
+  'json5 format sort compact no blank (case)',
+  'cases.json5.sort-compact-no-blank.text',
+  () => json5.format(readCase('json5.sort-compact-no-blank.text'), { sortKeys: true, compact: true }),
+  {
+    assert: (result) => {
+      const text = String(result);
+      if (text.includes('\n\n')) {
+        throw new Error('expected no blank lines between members');
       }
     },
   },

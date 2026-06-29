@@ -1,10 +1,10 @@
 /**
  * @param {string} typeName
- * @param {Record<string, import('./models.js').TypeModel>} classMap
- * @returns {import('./models.js').TypeModel[]}
+ * @param {Record<string, import('../../java8/models.js').TypeModel>} classMap
+ * @returns {import('../../java8/models.js').TypeModel[]}
  */
 export function collectExtendsChain(typeName, classMap) {
-  /** @type {import('./models.js').TypeModel[]} */
+  /** @type {import('../../java8/models.js').TypeModel[]} */
   const chain = [];
   let current = classMap[typeName];
   while (current) {
@@ -20,8 +20,8 @@ export function collectExtendsChain(typeName, classMap) {
 
 /**
  * @param {string} typeName
- * @param {Record<string, import('./models.js').TypeModel>} classMap
- * @returns {import('./models.js').FieldMemberModel[]}
+ * @param {Record<string, import('../../java8/models.js').TypeModel>} classMap
+ * @returns {import('../../java8/models.js').FieldMemberModel[]}
  */
 export function effectiveFields(typeName, classMap) {
   const chain = collectExtendsChain(typeName, classMap);
@@ -29,7 +29,7 @@ export function effectiveFields(typeName, classMap) {
     return [];
   }
 
-  /** @type {Map<string, import('./models.js').FieldMemberModel>} */
+  /** @type {Map<string, import('../../java8/models.js').FieldMemberModel>} */
   const byName = new Map();
   for (const type of chain) {
     for (const member of type.ownMembers) {
@@ -39,7 +39,7 @@ export function effectiveFields(typeName, classMap) {
     }
   }
 
-  /** @type {import('./models.js').FieldMemberModel[]} */
+  /** @type {import('../../java8/models.js').FieldMemberModel[]} */
   const result = [];
   const seen = new Set();
   for (const type of chain) {
@@ -55,7 +55,7 @@ export function effectiveFields(typeName, classMap) {
 }
 
 /**
- * @param {import('./models.js').TypeSignature} typeSig
+ * @param {import('../../java8/models.js').TypeSignature} typeSig
  * @param {Set<string>} [names]
  * @returns {Set<string>}
  */
@@ -82,7 +82,7 @@ export function collectObjectTypeNames(typeSig, names = new Set()) {
 }
 
 /**
- * @param {import('./models.js').TypeSignature} typeSig
+ * @param {import('../../java8/models.js').TypeSignature} typeSig
  * @param {string} typeName
  * @returns {boolean}
  */
@@ -94,7 +94,7 @@ export function fieldReferencesType(typeSig, typeName) {
 }
 
 /**
- * @param {import('./models.js').TypeSignature} typeSig
+ * @param {import('../../java8/models.js').TypeSignature} typeSig
  * @param {string[]} path
  * @returns {boolean}
  */

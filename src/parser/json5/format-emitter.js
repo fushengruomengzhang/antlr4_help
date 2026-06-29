@@ -149,6 +149,110 @@ export class FormatEmitter {
     return /,/.test(text);
   }
 
+  /** @param {string} suffix */
+  normalizeCommaBeforeComment(suffix) {
+    if (!suffix) return suffix;
+    return suffix
+      .replace(/^(\s*)((?:\/\/[^\n\r]*|\/\*[\s\S]*?\*\/)\s*),(\s*)$/m, ',$1$2$3')
+      .replace(/(\s*(?:\/\/[^\n\r]*|\/\*[\s\S]*?\*\/)\s*),(\s*)$/, ',$1$2');
+  }
+
+  /**
+   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} sourceMembers
+   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext} member
+   * @param {import('antlr4').Token} closeTok
+   */
+  sourceNextKeyToken(sourceMembers, member, closeTok) {
+    const sourceIdx = sourceMembers.indexOf(member);
+    if (sourceIdx < 0 || sourceIdx >= sourceMembers.length - 1) {
+      return closeTok;
+    }
+    return sourceMembers[sourceIdx + 1].key().start;
+  }
+
+  /**
+   * @param {import('antlr4').Token} fromTok
+   * @param {import('antlr4').Token} toTok
+   */
+  hiddenTokensBetween(fromTok, toTok) {
+    if (!fromTok || !toTok || fromTok.tokenIndex == null || toTok.tokenIndex == null) {
+      return [];
+    }
+    this.tokens.fill();
+    const hidden = [];
+    for (let i = fromTok.tokenIndex + 1; i < toTok.tokenIndex; i++) {
+      const t = this.tokens.tokens[i];
+      if (t && t.channel === HIDDEN) hidden.push(t);
+    }
+    return hidden;
+  }
+
+  /**
+   * @param {import('antlr4').Token[]} hiddenTokens
+   * @param {Set<number>} emittedIndices
+   */
+  markHiddenEmitted(hiddenTokens, emittedIndices) {
+    for (const t of hiddenTokens) {
+      if (t.tokenIndex != null) emittedIndices.add(t.tokenIndex);
+    }
+  }
+
+  /** @param {string} suffix */
+  normalizeMemberSuffixCompact(suffix) {
+    if (!suffix) return suffix;
+    suffix = this.compactWhitespace(suffix);
+    return suffix.replace(/\n[ \t]*(?=\n)/g, '\n').replace(/\n{2,}/g, '\n');
+  }
+
+  /**
+   * @param {import('antlr4').Token} keyTok
+   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext} member
+   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} sourceMembers
+   * @param {import('antlr4').Token} openTok
+   * @param {Set<number>} [emittedHiddenIndices]
+   */
+  hiddenLeftForSortedMember(keyTok, member, sourceMembers, openTok, emittedHiddenIndices) {
+    let hidden = this.hiddenLeft(keyTok);
+
+    const sourceIdx = sourceMembers.indexOf(member);
+    if (sourceIdx > 0) {
+      const prevMember = sourceMembers[sourceIdx - 1];
+      const prevValStop = this.endToken(prevMember.value());
+      if (prevValStop?.tokenIndex != null && keyTok.tokenIndex != null) {
+        const fromIdx = prevValStop.tokenIndex + 1;
+        const toIdx = keyTok.tokenIndex;
+        hidden = hidden.filter((t) => t.tokenIndex < fromIdx || t.tokenIndex >= toIdx);
+      }
+    }
+
+    if (emittedHiddenIndices) {
+      hidden = hidden.filter((t) => !emittedHiddenIndices.has(t.tokenIndex));
+    }
+    return hidden;
+  }
+
+  /**
+   * @param {import('antlr4').Token} valStop
+   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext} member
+   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} sourceMembers
+   * @param {import('antlr4').Token} closeTok
+   * @param {boolean} isLastInOutput
+   * @param {boolean} [compact]
+   */
+  memberSuffixForSortedMember(valStop, member, sourceMembers, closeTok, isLastInOutput, compact = false) {
+    const sourceNextKey = this.sourceNextKeyToken(sourceMembers, member, closeTok);
+    let suffix = this.spanBetween(valStop, sourceNextKey);
+    if (compact) {
+      suffix = this.normalizeMemberSuffixCompact(suffix);
+    }
+    if (isLastInOutput) {
+      suffix = this.stripTrailingCommaSuffix(suffix);
+    } else if (!this.containsComma(suffix)) {
+      suffix = ',' + suffix;
+    }
+    return this.normalizeCommaBeforeComment(suffix);
+  }
+
   /**
    * @param {import('../../grammars/json5/Json5Parser.js').default.Json5Context} root
    */
@@ -268,8 +372,10 @@ export class FormatEmitter {
     }
 
     const useSortAnchors = this.options.sortKeys;
+    const sourceMembers = ctx.member ? ctx.member() : [];
+    const emittedHiddenIndices = useSortAnchors ? new Set() : null;
     let out = '{';
-    const openingHidden = useSortAnchors ? [] : this.hiddenRight(openTok);
+    const openingHidden = this.hiddenRight(openTok);
 
     if (members.length === 0) {
       out += this.emitHiddenCompact(openingHidden);
@@ -277,8 +383,9 @@ export class FormatEmitter {
       return out;
     }
 
-    if (!useSortAnchors) {
-      out += this.emitHiddenCompact(openingHidden);
+    out += this.emitHiddenCompact(openingHidden);
+    if (emittedHiddenIndices) {
+      this.markHiddenEmitted(openingHidden, emittedHiddenIndices);
     }
 
     let lastMemberTrailingHidden = [];
@@ -288,11 +395,22 @@ export class FormatEmitter {
       const keyTok = member.key().start;
       const valCtx = member.value();
       const valStop = this.endToken(valCtx);
+      const isLastInOutput = i === members.length - 1;
 
       out = this.beginMemberLine(out, depth);
 
       if (useSortAnchors) {
-        out += this.emitHiddenCompact(this.hiddenLeft(keyTok));
+        const prefixHidden = this.hiddenLeftForSortedMember(
+          keyTok,
+          member,
+          sourceMembers,
+          openTok,
+          emittedHiddenIndices,
+        );
+        out += this.emitHiddenCompact(prefixHidden);
+        if (emittedHiddenIndices) {
+          this.markHiddenEmitted(prefixHidden, emittedHiddenIndices);
+        }
       }
 
       out += this.emitKey(member.key());
@@ -300,15 +418,17 @@ export class FormatEmitter {
       out += this.formatValue(valCtx, depth + 1);
 
       if (useSortAnchors) {
-        const trailingHidden = this.hiddenRight(valStop);
-        let trailing = this.compactWhitespace(this.emitHidden(trailingHidden));
-        if (i === members.length - 1) {
-          trailing = this.stripTrailingCommaSuffix(trailing);
-          lastMemberTrailingHidden = trailingHidden;
-        } else if (!this.containsComma(trailing)) {
-          trailing += ',';
+        out += this.memberSuffixForSortedMember(
+          valStop,
+          member,
+          sourceMembers,
+          closeTok,
+          isLastInOutput,
+          true,
+        );
+        if (isLastInOutput) {
+          lastMemberTrailingHidden = this.hiddenTokensBetween(valStop, closeTok);
         }
-        out += trailing;
       } else {
         const boundaryTok = i < members.length - 1 ? members[i + 1].key().start : closeTok;
         let suffix = this.compactWhitespace(this.spanBetween(valStop, boundaryTok));
@@ -387,6 +507,8 @@ export class FormatEmitter {
       return out;
     }
 
+    const sourceMembers = ctx.member ? ctx.member() : [];
+    const useSortAnchors = this.options.sortKeys;
     let lastMemberTrailingHidden = [];
 
     for (let i = 0; i < members.length; i++) {
@@ -394,7 +516,11 @@ export class FormatEmitter {
       const keyTok = member.key().start;
       out += '\n';
       out += this.indentUnit(depth + 1);
-      out += this.emitHidden(this.hiddenLeft(keyTok));
+      out += this.emitHidden(
+        useSortAnchors
+          ? this.hiddenLeftForSortedMember(keyTok, member, sourceMembers, openTok)
+          : this.hiddenLeft(keyTok),
+      );
       out += this.emitKey(member.key());
       out += ': ';
       const valCtx = member.value();
@@ -404,13 +530,28 @@ export class FormatEmitter {
         out += this.formatPrimitiveValue(valCtx);
       }
       const valStop = this.endToken(valCtx);
-      const trailingHidden = this.hiddenRight(valStop);
-      out += this.emitHidden(trailingHidden);
-      if (i === members.length - 1) {
-        lastMemberTrailingHidden = trailingHidden;
-      }
-      if (i < members.length - 1) {
-        out += ',';
+      const isLastInOutput = i === members.length - 1;
+      if (useSortAnchors) {
+        out += this.memberSuffixForSortedMember(
+          valStop,
+          member,
+          sourceMembers,
+          closeTok,
+          isLastInOutput,
+          false,
+        );
+        if (isLastInOutput) {
+          lastMemberTrailingHidden = this.hiddenTokensBetween(valStop, closeTok);
+        }
+      } else {
+        const trailingHidden = this.hiddenRight(valStop);
+        out += this.emitHidden(trailingHidden);
+        if (isLastInOutput) {
+          lastMemberTrailingHidden = trailingHidden;
+        }
+        if (!isLastInOutput) {
+          out += ',';
+        }
       }
     }
 
