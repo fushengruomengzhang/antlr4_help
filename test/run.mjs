@@ -1,7 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { json, json5, java8, api, ParseError } from '../src/index.js';
+import { JSON4, JSON5, JAVA8, API, ParseError } from '../src/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const resourcesDir = join(__dirname, 'resources');
@@ -178,11 +178,11 @@ const jsonInput = readFixture('test.json.text');
 const javaInput = readFixture('test.java.text');
 
 runCase('json5 validate', 'test.json5.validate.txt', () => {
-  json5.validate(json5Input);
+  JSON5.validate(json5Input);
   return 'OK';
 });
 
-runCase('json5 parse', 'test.json5.parse.json', () => json5.parse(json5Input), {
+runCase('json5 parse', 'test.json5.parse.json', () => JSON5.parse(json5Input), {
   assert: (result) => {
     const names = String(result.names);
     if (names.includes('三引号注释')) {
@@ -194,22 +194,22 @@ runCase('json5 parse', 'test.json5.parse.json', () => json5.parse(json5Input), {
   },
 });
 
-runCase('json5 format', 'test.json5.format.text', () => json5.format(json5Input));
+runCase('json5 format', 'test.json5.format.text', () => JSON5.format(json5Input));
 
 runCase(
   'json5 format (sortKeys)',
   'test.json5.format.sorted.text',
-  () => json5.format(json5Input, { sortKeys: true, compact: true }),
+  () => JSON5.format(json5Input, { sortKeys: true, compact: true }),
 );
 
 runCase(
   'json5 format (compact)',
   'test.json5.format.compact.text',
-  () => json5.format(json5Input, { compact: true }),
+  () => JSON5.format(json5Input, { compact: true }),
   { golden: 'test.json5.format.compact.text' },
 );
 
-runCase('json parse', 'test.json.parse.json', () => json.parse(jsonInput), {
+runCase('json parse', 'test.json.parse.json', () => JSON4.parse(jsonInput), {
   assert: (result) => {
     if (result['1'] !== '数字key') {
       throw new Error(`expected result["1"] === "数字key", got ${JSON.stringify(result['1'])}`);
@@ -217,14 +217,14 @@ runCase('json parse', 'test.json.parse.json', () => json.parse(jsonInput), {
   },
 });
 
-runCase('java8 firstClassName', 'test.java.firstClassName.txt', () => java8.firstClassName(javaInput));
+runCase('java8 firstClassName', 'test.java.firstClassName.txt', () => JAVA8.firstClassName(javaInput));
 
-runCase('java8 signatures', 'test.java.signatures.json', () => java8.signatures(javaInput));
+runCase('java8 signatures', 'test.java.signatures.json', () => JAVA8.signatures(javaInput));
 
 runCase(
   'api java8ToApiSchema',
   'test.java.api.json',
-  () => api.java8ToApiSchema(javaInput, { rootClass: 'User' }),
+  () => API.java8ToApiSchema(javaInput, { rootClass: 'User' }),
   {
     assert: (result) => {
       const nodes = /** @type {unknown[]} */ (result);
@@ -264,7 +264,7 @@ runCase(
 runCase(
   'json5 format sort+compact (case)',
   'cases.json5.sort-compact.text',
-  () => json5.format(readCase('json5.sort-compact.text'), { sortKeys: true, compact: true }),
+  () => JSON5.format(readCase('json5.sort-compact.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
       const text = String(result);
@@ -284,7 +284,7 @@ runCase(
 runCase(
   'json5 format sort inline comment (case)',
   'cases.json5.sort-inline-comment.text',
-  () => json5.format(readCase('json5.sort-inline-comment.text'), { sortKeys: true, compact: true }),
+  () => JSON5.format(readCase('json5.sort-inline-comment.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
       const text = String(result);
@@ -298,7 +298,7 @@ runCase(
 runCase(
   'json5 format sort compact opening (case)',
   'cases.json5.sort-compact-opening.text',
-  () => json5.format(readCase('json5.sort-compact-opening.text'), { sortKeys: true, compact: true }),
+  () => JSON5.format(readCase('json5.sort-compact-opening.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
       const text = String(result);
@@ -312,7 +312,7 @@ runCase(
 runCase(
   'json5 format sort compact no blank (case)',
   'cases.json5.sort-compact-no-blank.text',
-  () => json5.format(readCase('json5.sort-compact-no-blank.text'), { sortKeys: true, compact: true }),
+  () => JSON5.format(readCase('json5.sort-compact-no-blank.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
       const text = String(result);
@@ -324,10 +324,67 @@ runCase(
 );
 
 runCase(
+  'json5 format sort prefix comment (case)',
+  'cases.json5.sort-prefix-comment.text',
+  () => JSON5.format(readCase('json5.sort-prefix-comment.text'), { sortKeys: true, compact: true }),
+  {
+    assert: (result) => {
+      const text = String(result);
+      const keyIdx = text.indexOf('中文字段');
+      const commentIdx = text.indexOf('// 中文 key');
+      const dollarIdx = text.indexOf('"$key"');
+      if (commentIdx < 0 || keyIdx < 0) {
+        throw new Error('expected prefix comment and 中文字段 key to be preserved');
+      }
+      if (commentIdx > keyIdx) {
+        throw new Error('expected // 中文 key before 中文字段');
+      }
+      const dollarLine = text.match(/"\$key"[^\n]*/)?.[0] ?? '';
+      if (dollarLine.includes('中文 key')) {
+        throw new Error('expected // 中文 key not on $key member line');
+      }
+      const betweenDollarAndChinese = text.slice(dollarIdx, keyIdx);
+      if (!betweenDollarAndChinese.includes('// 中文 key')) {
+        throw new Error('expected // 中文 key between $key and 中文字段 members');
+      }
+    },
+  },
+);
+
+runCase(
+  'json5 format sort prefix unicode (case)',
+  'cases.json5.sort-prefix-unicode.text',
+  () => JSON5.format(readCase('json5.sort-prefix-unicode.text'), { sortKeys: true, compact: true }),
+  {
+    assert: (result) => {
+      const text = String(result);
+      const unicodeKeyIdx = text.indexOf('"unicode"');
+      const commentIdx = text.indexOf('// unicode');
+      const bKeyIdx = text.indexOf('"b"');
+      if (commentIdx < 0 || unicodeKeyIdx < 0) {
+        throw new Error('expected // unicode prefix and unicode key to be preserved');
+      }
+      if (commentIdx > unicodeKeyIdx) {
+        throw new Error('expected // unicode before "unicode" key');
+      }
+      const aLine = text.match(/"a"[^\n]*/)?.[0] ?? '';
+      const bLine = text.match(/"b"[^\n]*/)?.[0] ?? '';
+      if (aLine.includes('// unicode') || bLine.includes('// unicode')) {
+        throw new Error('expected // unicode not on "a" or "b" member lines');
+      }
+      const betweenBAndUnicode = text.slice(bKeyIdx, unicodeKeyIdx);
+      if (!betweenBAndUnicode.includes('// unicode')) {
+        throw new Error('expected // unicode between "b" and "unicode" members');
+      }
+    },
+  },
+);
+
+runCase(
   'json5 validate (invalid)',
   undefined,
   () => {
-    json5.validate(readCase('json5.invalid.text'));
+    JSON5.validate(readCase('json5.invalid.text'));
   },
   {
     expectError: true,
@@ -342,7 +399,7 @@ runCase(
 runCase(
   'json5 triple opener line (parse)',
   undefined,
-  () => json5.parse(readCase('json5.triple-opener-line.text')),
+  () => JSON5.parse(readCase('json5.triple-opener-line.text')),
   {
     assert: (result) => {
       const text = String(result.x);
@@ -359,7 +416,7 @@ runCase(
 runCase(
   'json5 triple opener block (parse)',
   undefined,
-  () => json5.parse(readCase('json5.triple-opener-block.text')),
+  () => JSON5.parse(readCase('json5.triple-opener-block.text')),
   {
     assert: (result) => {
       const text = String(result.x);
@@ -376,7 +433,7 @@ runCase(
 runCase(
   'json5 triple unclosed (validate)',
   undefined,
-  () => json5.validate(readCase('json5.triple-unclosed.text')),
+  () => JSON5.validate(readCase('json5.triple-unclosed.text')),
   {
     expectError: true,
     assertError: (error) => {
@@ -390,7 +447,7 @@ runCase(
 runCase(
   'json5 triple mismatch (validate)',
   undefined,
-  () => json5.validate(readCase('json5.triple-mismatch.text')),
+  () => JSON5.validate(readCase('json5.triple-mismatch.text')),
   {
     expectError: true,
     assertError: (error) => {

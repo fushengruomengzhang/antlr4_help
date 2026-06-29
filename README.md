@@ -1,6 +1,6 @@
 # antlr4_help
 
-基于 **ANTLR 4.9.3** 的学习/参考项目，运行环境为 **Node.js (ESM)**。提供 json5、json、java8 三套语法的统一解析 API。
+基于 **ANTLR 4.9.3** 的学习/参考项目，运行环境为 **Node.js (ESM)**。提供 JSON5、JSON4、JAVA8 三套语法的统一解析 API。
 
 > antlr4 使用版本 4.9.3
 
@@ -39,32 +39,32 @@ npm run generate             # 修改 .g4 后重新生成
 ## API
 
 ```javascript
-import { json5, json, java8, api, ParseError } from './src/index.js';
+import { JSON5, JSON4, JAVA8, API, ParseError } from './src/index.js';
 
 // JSON5
-json5.validate('{ a: 1, }');           // void | ParseError
-json5.parse('{ a: 1, }');              // → object
-json5.format('{ a: 1, }', {
+JSON5.validate('{ a: 1, }');           // void | ParseError
+JSON5.parse('{ a: 1, }');              // → object
+JSON5.format('{ a: 1, }', {
   indent: { type: 'space', size: 2 },  // 或 { type: 'tab' }
   sortKeys: false,
   compact: false,  // true：紧凑布局 + 保留源字符串 token 形态
 });
 
-// JSON（100% ANTLR）
-json.parse('{"a":1}');
+// JSON4（标准 JSON，100% ANTLR；命名避开全局 JSON 对象）
+JSON4.parse('{"a":1}');
 
-// Java8（完整文件）
-java8.firstClassName('public class Foo { }');  // → "Foo"
-java8.signatures(javaSource);                   // → FileModel
+// JAVA8（完整文件）
+JAVA8.firstClassName('public class Foo { }');  // → "Foo"
+JAVA8.signatures(javaSource);                   // → FileModel
 
-// ApiSchema（Java8 Model → 字段树）
-api.java8ToApiSchema(javaSource, { rootClass: 'User' });
-api.snowflakeId();                              // ApiSchema 节点 id
+// API（Java8 Model → 字段树）
+API.java8ToApiSchema(javaSource, { rootClass: 'User' });
+API.snowflakeId();                              // ApiSchema 节点 id
 ```
 
 ### ParseError
 
-语法/词法错误统一抛出 `ParseError`，字段：`language`、`line`（1-based）、`column`（0-based）、`message`。
+语法/词法错误统一抛出 `ParseError`，字段：`language`（`'json5'` | `'json'` | `'java8'`，小写诊断 id）、`line`（1-based）、`column`（0-based）、`message`。
 
 ### JSON5 format 规则
 
@@ -77,4 +77,4 @@ api.snowflakeId();                              // ApiSchema 节点 id
 ## 说明
 
 - 修改语法后请 `npm run generate` 并提交 `src/grammars/` 下对应语言的生成物。
-- `json5.parse` 不保留注释；需保留注释请用 `json5.format`。
+- `JSON5.parse` 不保留注释；需保留注释请用 `JSON5.format`。

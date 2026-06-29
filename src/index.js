@@ -10,22 +10,22 @@ import { signatures } from './parser/java8/signatures.js';
 
 export { ParseError, DEFAULT_FORMAT_OPTIONS };
 
-export const json5 = {
+export const JSON5 = {
   validate: json5Validate,
   parse: json5Parse,
   format: json5Format,
 };
 
-export const json = {
+export const JSON4 = {
   parse: jsonParse,
 };
 
-export const java8 = {
+export const JAVA8 = {
   firstClassName,
   signatures,
 };
 
-export const api = {
+export const API = {
   snowflakeId,
   java8ToApiSchema,
 };
