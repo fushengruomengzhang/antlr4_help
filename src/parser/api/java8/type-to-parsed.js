@@ -1,4 +1,15 @@
-import { resolveBaseType } from './base-type-map.js';
+/** @type {Record<string, string>} */
+const baseTypeMap = {
+  String: 'String',
+  Boolean: 'Boolean',
+  LocalDateTime: 'String',
+  MultipartFile: 'File',
+  int: 'Number',
+  Integer: 'Number',
+  Long: 'Number',
+  Double: 'Number',
+  Float: 'Number',
+};
 
 /**
  * @typedef {{ kind: 'base', type: string }} BaseParsed
@@ -14,7 +25,7 @@ import { resolveBaseType } from './base-type-map.js';
  */
 export function typeSignatureToParsed(sig) {
   if (sig.kind === 'primitive') {
-    const mapped = resolveBaseType(sig.name);
+    const mapped = baseTypeMap[sig.name];
     if (mapped) {
       return { kind: 'base', type: mapped };
     }
@@ -36,7 +47,7 @@ export function typeSignatureToParsed(sig) {
       }
       return { kind: 'map', inner: typeSignatureToParsed(valueType) };
     }
-    const mapped = resolveBaseType(sig.name);
+    const mapped = baseTypeMap[sig.name];
     if (mapped) {
       return { kind: 'base', type: mapped };
     }
