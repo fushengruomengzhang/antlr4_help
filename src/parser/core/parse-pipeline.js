@@ -1,6 +1,7 @@
 import antlr4 from 'antlr4';
 import { ParseError } from './parse-error.js';
 
+/** 收集词法/语法错误，供 pipeline 统一抛出 ParseError。 */
 class CollectingErrorListener extends antlr4.error.ErrorListener {
   constructor() {
     super();
@@ -8,12 +9,14 @@ class CollectingErrorListener extends antlr4.error.ErrorListener {
     this.errors = [];
   }
 
+  /** ANTLR 回调：记录一条 syntaxError。 */
   syntaxError(_recognizer, _offendingSymbol, line, column, msg) {
     this.errors.push({ line, column, message: msg });
   }
 }
 
 /**
+ * 若 listener 有错误则抛出 ParseError（取第一条）。
  * @param {ParseLanguage} language
  * @param {CollectingErrorListener} listener
  */
@@ -34,6 +37,7 @@ function throwIfErrors(language, listener) {
  */
 
 /**
+ * 统一 ANTLR 解析管线：InputStream → Lexer → TokenStream → Parser → entry rule。
  * @param {ParsePipelineOptions} options
  * @returns {{ tree: import('antlr4').ParserRuleContext, tokenStream: import('antlr4').CommonTokenStream, parser: import('antlr4').Parser }}
  */

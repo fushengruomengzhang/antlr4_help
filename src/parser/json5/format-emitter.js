@@ -21,6 +21,8 @@ const HIDDEN = antlr4.Token.HIDDEN_CHANNEL;
  * @property {boolean} [compact]
  */
 
+/** @typedef {{ idx: number, text: string }} SpanEntry */
+
 export const DEFAULT_FORMAT_OPTIONS = {
   indent: { type: 'space', size: 2 },
   sortKeys: false,
@@ -28,6 +30,7 @@ export const DEFAULT_FORMAT_OPTIONS = {
 };
 
 /**
+ * 合并并规范化 format 选项。
  * @param {FormatOptions} [options]
  * @returns {Required<FormatOptions>}
  */
@@ -40,6 +43,49 @@ export function normalizeFormatOptions(options) {
   };
 }
 
+/** compact 容器 formatter 用的分块字符串缓冲，减少深层 += 分配。 */
+class TextBuf {
+  constructor() {
+    /** @type {string[]} */
+    this.parts = [];
+  }
+
+  /** @param {...string} chunks */
+  push(...chunks) {
+    for (const c of chunks) {
+      if (c) this.parts.push(c);
+    }
+  }
+
+  toString() {
+    return this.parts.join('');
+  }
+
+  /**
+   * 新 member 行前去掉行尾空白，补换行与 member 缩进。
+   * @param {(memberDepth: number) => string} indentAtMemberDepth
+   * @param {number} depth 当前容器 depth
+   */
+  beginMemberLine(indentAtMemberDepth, depth) {
+    let line = this.parts.join('');
+    line = line.replace(/\n[ \t]+$/, '\n');
+    if (!line.endsWith('\n')) line += '\n';
+    this.parts = [line + indentAtMemberDepth(depth + 1)];
+  }
+
+  /**
+   * 闭合括号行前补容器级缩进。
+   * @param {(closeDepth: number) => string} indentAtCloseDepth
+   * @param {number} depth
+   */
+  beginCloseLine(indentAtCloseDepth, depth) {
+    let line = this.parts.join('');
+    line = line.replace(/\n[ \t]+$/, '\n');
+    if (!line.endsWith('\n')) line += '\n';
+    this.parts = [line + indentAtCloseDepth(depth)];
+  }
+}
+
 export class FormatEmitter {
   /**
    * @param {import('antlr4').CommonTokenStream} tokenStream
@@ -48,46 +94,77 @@ export class FormatEmitter {
   constructor(tokenStream, options) {
     this.tokens = tokenStream;
     this.options = normalizeFormatOptions(options);
+    /** @type {Map<number, string>} */
+    this._indentCache = new Map();
+    this._tokensFilled = false;
+    /** @type {Map<string, SpanEntry[]> | null} */
+    this._spanCache = null;
+    this.ensureTokensFilled();
   }
 
-  /** @param {number} depth */
+  /** 整个 emit 生命周期内只 fill token 流一次。 */
+  ensureTokensFilled() {
+    if (!this._tokensFilled) {
+      this.tokens.fill();
+      this._tokensFilled = true;
+    }
+  }
+
+  /**
+   * 按 depth 返回缩进串（带实例缓存）。
+   * @param {number} depth
+   */
   indentUnit(depth) {
+    if (this._indentCache.has(depth)) {
+      return this._indentCache.get(depth);
+    }
     const { indent } = this.options;
-    if (indent.type === 'tab') return '\t'.repeat(Math.max(0, depth));
-    return ' '.repeat(Math.max(0, depth * indent.size));
+    const unit =
+      indent.type === 'tab'
+        ? '\t'.repeat(Math.max(0, depth))
+        : ' '.repeat(Math.max(0, depth * indent.size));
+    this._indentCache.set(depth, unit);
+    return unit;
   }
 
-  /** @param {import('antlr4').Token} token */
+  /**
+   * 读取 token 左侧 HIDDEN 通道 token（注释、空白等）。
+   * @param {import('antlr4').Token} token
+   */
   hiddenLeft(token) {
     if (!token || token.tokenIndex == null) return [];
-    this.tokens.fill();
+    this.ensureTokensFilled();
     const hidden = this.tokens.getHiddenTokensToLeft(token.tokenIndex, HIDDEN);
     return hidden ?? [];
   }
 
-  /** @param {import('antlr4').Token} token */
+  /**
+   * 读取 token 右侧 HIDDEN 通道 token。
+   * @param {import('antlr4').Token} token
+   */
   hiddenRight(token) {
     if (!token || token.tokenIndex == null) return [];
-    this.tokens.fill();
+    this.ensureTokensFilled();
     const idx = token.tokenIndex;
     if (idx >= this.tokens.tokens.length - 1) return [];
     const hidden = this.tokens.getHiddenTokensToRight(idx, HIDDEN);
     return hidden ?? [];
   }
 
-  /** @param {import('antlr4').ParserRuleContext} ctx */
+  /** 取 parse tree 节点对应的结束 token。 */
   endToken(ctx) {
     if (ctx.stop) return ctx.stop;
     if (ctx.start) return ctx.start;
     return null;
   }
 
-  /** @param {import('antlr4').Token[]} hiddenTokens */
+  /** 将 hidden token 数组拼成原始文本。 */
   emitHidden(hiddenTokens) {
     return hiddenTokens.map((t) => t.text).join('');
   }
 
   /**
+   * compact 路径 emit hidden，并折叠多余空行。
    * @param {import('antlr4').Token[]} hiddenTokens
    * @param {Set<number>} [excludeIndices]
    */
@@ -98,30 +175,14 @@ export class FormatEmitter {
     return this.compactWhitespace(this.emitHidden(filtered));
   }
 
-  /** @param {string} text */
+  /** 折叠连续换行为单行换行。 */
   compactWhitespace(text) {
     return text.replace(/\n{2,}/g, '\n');
   }
 
-  /** @param {string} out @param {number} depth */
-  beginMemberLine(out, depth) {
-    let line = out.replace(/\n[ \t]+$/, '\n');
-    if (!line.endsWith('\n')) {
-      line += '\n';
-    }
-    return line + this.indentUnit(depth + 1);
-  }
-
-  /** @param {string} out @param {number} depth */
-  beginCloseLine(out, depth) {
-    let line = out.replace(/\n[ \t]+$/, '\n');
-    if (!line.endsWith('\n')) {
-      line += '\n';
-    }
-    return line + this.indentUnit(depth);
-  }
-
   /**
+   * 收集两 token 之间（不含端点）的文本；可排除指定 token index。
+   * sort 路径 suffix 收集时 exclude 下一 member 的 pure prefix。
    * @param {import('antlr4').Token} fromTok
    * @param {import('antlr4').Token} toTok
    * @param {Set<number>} [excludeTokenIndices]
@@ -130,28 +191,35 @@ export class FormatEmitter {
     if (!fromTok || !toTok || fromTok.tokenIndex == null || toTok.tokenIndex == null) {
       return '';
     }
-    this.tokens.fill();
-    const parts = [];
-    for (let i = fromTok.tokenIndex + 1; i < toTok.tokenIndex; i++) {
-      const t = this.tokens.tokens[i];
-      if (!t || t.type === antlr4.Token.EOF) continue;
-      if (excludeTokenIndices?.has(t.tokenIndex)) continue;
-      parts.push(t.text);
+    this.ensureTokensFilled();
+    const cacheKey = `${fromTok.tokenIndex}:${toTok.tokenIndex}`;
+    let entries = this._spanCache?.get(cacheKey);
+    if (!entries) {
+      entries = [];
+      for (let i = fromTok.tokenIndex + 1; i < toTok.tokenIndex; i++) {
+        const t = this.tokens.tokens[i];
+        if (!t || t.type === antlr4.Token.EOF) continue;
+        entries.push({ idx: t.tokenIndex, text: t.text });
+      }
+      if (this._spanCache) this._spanCache.set(cacheKey, entries);
     }
-    return parts.join('');
+    if (!excludeTokenIndices) {
+      return entries.map((e) => e.text).join('');
+    }
+    return entries.filter((e) => !excludeTokenIndices.has(e.idx)).map((e) => e.text).join('');
   }
 
-  /** @param {string} suffix */
+  /** 去掉末 member suffix 中 trailing 逗号（保留注释）。 */
   stripTrailingCommaSuffix(suffix) {
     return suffix.replace(/,(\s*(?:\/\/[^\n\r]*|\/\*[\s\S]*?\*\/)?\s*)$/, '$1');
   }
 
-  /** @param {string} text */
+  /** suffix 是否已含逗号。 */
   containsComma(text) {
     return /,/.test(text);
   }
 
-  /** @param {string} suffix */
+  /** 行尾 inline 注释前确保逗号在注释之前（`, //`）。 */
   normalizeCommaBeforeComment(suffix) {
     if (!suffix) return suffix;
     return suffix
@@ -160,19 +228,46 @@ export class FormatEmitter {
   }
 
   /**
+   * 源码 member 列表 → member context → 下标 Map（O(1) 查找）。
+   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} sourceMembers
+   */
+  buildMemberIndexMap(sourceMembers) {
+    const map = new Map();
+    for (let i = 0; i < sourceMembers.length; i++) {
+      map.set(sourceMembers[i], i);
+    }
+    return map;
+  }
+
+  /**
+   * 按 sortKeys 预计算 sort key 并稳定排序。
+   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} members
+   */
+  sortMembers(members) {
+    if (!this.options.sortKeys) return members;
+    return members
+      .map((member, ord) => ({ member, sortKey: this.keySortString(member.key()), ord }))
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey) || a.ord - b.ord)
+      .map((x) => x.member);
+  }
+
+  /**
+   * 当前 member 在源码中的下一项 key token（非排序后下一项）。
    * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} sourceMembers
    * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext} member
    * @param {import('antlr4').Token} closeTok
+   * @param {Map<import('../../grammars/json5/Json5Parser.js').default.MemberContext, number>} memberIdxMap
    */
-  sourceNextKeyToken(sourceMembers, member, closeTok) {
-    const sourceIdx = sourceMembers.indexOf(member);
-    if (sourceIdx < 0 || sourceIdx >= sourceMembers.length - 1) {
+  sourceNextKeyToken(sourceMembers, member, closeTok, memberIdxMap) {
+    const sourceIdx = memberIdxMap.get(member);
+    if (sourceIdx == null || sourceIdx < 0 || sourceIdx >= sourceMembers.length - 1) {
       return closeTok;
     }
     return sourceMembers[sourceIdx + 1].key().start;
   }
 
   /**
+   * 两 token 之间 HIDDEN 通道 token 列表。
    * @param {import('antlr4').Token} fromTok
    * @param {import('antlr4').Token} toTok
    */
@@ -180,7 +275,7 @@ export class FormatEmitter {
     if (!fromTok || !toTok || fromTok.tokenIndex == null || toTok.tokenIndex == null) {
       return [];
     }
-    this.tokens.fill();
+    this.ensureTokensFilled();
     const hidden = [];
     for (let i = fromTok.tokenIndex + 1; i < toTok.tokenIndex; i++) {
       const t = this.tokens.tokens[i];
@@ -189,17 +284,14 @@ export class FormatEmitter {
     return hidden;
   }
 
-  /**
-   * @param {import('antlr4').Token[]} hiddenTokens
-   * @param {Set<number>} emittedIndices
-   */
+  /** 标记 hidden token 已 emit，避免 sort 路径重复输出。 */
   markHiddenEmitted(hiddenTokens, emittedIndices) {
     for (const t of hiddenTokens) {
       if (t.tokenIndex != null) emittedIndices.add(t.tokenIndex);
     }
   }
 
-  /** @param {string} suffix */
+  /** compact sort suffix：压空行并去掉 member 间 layout gap。 */
   normalizeMemberSuffixCompact(suffix) {
     if (!suffix) return suffix;
     suffix = this.compactWhitespace(suffix);
@@ -207,26 +299,35 @@ export class FormatEmitter {
     return this.trimInterMemberGapCompact(suffix);
   }
 
-  /** @param {string} suffix */
+  /** 丢弃 suffix 末尾 inter-member 空白行（保留 `, // inline`）。 */
   trimInterMemberGapCompact(suffix) {
     if (!suffix) return suffix;
     return suffix.replace(/\n[ \t]*$/g, '');
   }
 
   /**
+   * sort 路径：key 左侧 hidden，去掉上一 member 残留 gap，保留 pure prefix。
    * @param {import('antlr4').Token} keyTok
    * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext} member
    * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} sourceMembers
    * @param {import('antlr4').Token} openTok
    * @param {Set<number>} [emittedHiddenIndices]
+   * @param {Map<import('../../grammars/json5/Json5Parser.js').default.MemberContext, number>} memberIdxMap
    */
-  hiddenLeftForSortedMember(keyTok, member, sourceMembers, openTok, emittedHiddenIndices) {
+  hiddenLeftForSortedMember(
+    keyTok,
+    member,
+    sourceMembers,
+    openTok,
+    emittedHiddenIndices,
+    memberIdxMap,
+  ) {
     let hidden = this.hiddenLeft(keyTok);
     if (emittedHiddenIndices) {
       hidden = hidden.filter((t) => !emittedHiddenIndices.has(t.tokenIndex));
     }
-    const sourceIdx = sourceMembers.indexOf(member);
-    if (sourceIdx > 0) {
+    const sourceIdx = memberIdxMap.get(member);
+    if (sourceIdx != null && sourceIdx > 0) {
       const prevValStop = this.endToken(sourceMembers[sourceIdx - 1].value());
       let firstPurePrefixIdx = hidden.length;
       for (let i = 0; i < hidden.length; i++) {
@@ -254,6 +355,7 @@ export class FormatEmitter {
   }
 
   /**
+   * 判断 comment 是否为下一 member 的 section prefix（非上一 member 行尾 inline）。
    * @param {import('antlr4').Token} valStop
    * @param {import('antlr4').Token} nextKeyTok
    * @param {import('antlr4').Token} commentToken
@@ -270,10 +372,7 @@ export class FormatEmitter {
   }
 
   /**
-   * Tokens in hiddenLeft(nextKey) that belong to next member's pure prefix block
-   * (from first pure-prefix comment through end). Preceding tokens may hold prev
-   * member trailing inline and MUST NOT be excluded from suffix.
-   *
+   * hiddenLeft 中属于下一 member pure prefix 块的 token（从首个 pure prefix 注释起）。
    * @param {import('antlr4').Token} valStop
    * @param {import('antlr4').Token} nextKeyTok
    * @param {import('antlr4').Token[]} hiddenLeftTokens
@@ -297,14 +396,16 @@ export class FormatEmitter {
   }
 
   /**
+   * suffix 收集时需排除的下一 member pure prefix token index 集合。
    * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} sourceMembers
    * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext} member
    * @param {import('antlr4').Token} valStop
    * @param {import('antlr4').Token} sourceNextKey
+   * @param {Map<import('../../grammars/json5/Json5Parser.js').default.MemberContext, number>} memberIdxMap
    */
-  excludedNextMemberPrefixIndices(sourceMembers, member, valStop, sourceNextKey) {
-    const sourceIdx = sourceMembers.indexOf(member);
-    if (sourceIdx < 0 || sourceIdx >= sourceMembers.length - 1) {
+  excludedNextMemberPrefixIndices(sourceMembers, member, valStop, sourceNextKey, memberIdxMap) {
+    const sourceIdx = memberIdxMap.get(member);
+    if (sourceIdx == null || sourceIdx < 0 || sourceIdx >= sourceMembers.length - 1) {
       return undefined;
     }
     const nextMember = sourceMembers[sourceIdx + 1];
@@ -318,20 +419,31 @@ export class FormatEmitter {
   }
 
   /**
+   * sort 路径 member suffix：以源码下一 key 为终点，保留 inline、排除 pure prefix。
    * @param {import('antlr4').Token} valStop
    * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext} member
    * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} sourceMembers
    * @param {import('antlr4').Token} closeTok
    * @param {boolean} isLastInOutput
    * @param {boolean} [compact]
+   * @param {Map<import('../../grammars/json5/Json5Parser.js').default.MemberContext, number>} memberIdxMap
    */
-  memberSuffixForSortedMember(valStop, member, sourceMembers, closeTok, isLastInOutput, compact = false) {
-    const sourceNextKey = this.sourceNextKeyToken(sourceMembers, member, closeTok);
+  memberSuffixForSortedMember(
+    valStop,
+    member,
+    sourceMembers,
+    closeTok,
+    isLastInOutput,
+    compact,
+    memberIdxMap,
+  ) {
+    const sourceNextKey = this.sourceNextKeyToken(sourceMembers, member, closeTok, memberIdxMap);
     const excludeIndices = this.excludedNextMemberPrefixIndices(
       sourceMembers,
       member,
       valStop,
       sourceNextKey,
+      memberIdxMap,
     );
     let suffix = this.spanBetween(valStop, sourceNextKey, excludeIndices);
     if (compact) {
@@ -345,9 +457,7 @@ export class FormatEmitter {
     return this.normalizeCommaBeforeComment(suffix);
   }
 
-  /**
-   * @param {import('../../grammars/json5/Json5Parser.js').default.Json5Context} root
-   */
+  /** 格式化整份 JSON5 文档（根 value + 文档头尾注释）。 */
   formatDocument(root) {
     const valueCtx = root.value();
     let out = this.emitHidden(this.hiddenLeft(valueCtx.start));
@@ -363,14 +473,14 @@ export class FormatEmitter {
     return out.trimEnd();
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.ValueContext} ctx @param {number} depth */
+  /** 按 value 类型分派 object / array /  primitive。 */
   formatValue(ctx, depth) {
     if (ctx.object()) return this.formatObject(ctx.object(), depth);
     if (ctx.array()) return this.formatArray(ctx.array(), depth);
     return this.options.compact ? this.emitSourceValue(ctx) : this.formatPrimitiveValue(ctx);
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.ValueContext} ctx */
+  /** compact：保留源 token 形态的 primitive value。 */
   emitSourceValue(ctx) {
     if (ctx.STRING()) return ctx.STRING().getText();
     if (ctx.tripleSingleString()) return this.emitTripleSingleString(ctx.tripleSingleString());
@@ -383,7 +493,7 @@ export class FormatEmitter {
     return ctx.getText();
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.ValueContext} ctx */
+  /** pretty：规范化字符串为双引号等的 primitive value。 */
   formatPrimitiveValue(ctx) {
     if (ctx.STRING()) {
       return encodeDoubleQuotedString(decodeJson5String(ctx.STRING().getText()));
@@ -402,7 +512,7 @@ export class FormatEmitter {
     return ctx.getText();
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.TripleSingleStringContext} ctx */
+  /** 输出单引号三引号字符串（含 opener 注释）。 */
   emitTripleSingleString(ctx) {
     const openTok = ctx.TRIPLE_S_OPEN().symbol;
     let out = openTok.text;
@@ -412,7 +522,7 @@ export class FormatEmitter {
     return out;
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.TripleDoubleStringContext} ctx */
+  /** 输出双引号三引号字符串（含 opener 注释）。 */
   emitTripleDoubleString(ctx) {
     const openTok = ctx.TRIPLE_D_OPEN().symbol;
     let out = openTok.text;
@@ -422,7 +532,7 @@ export class FormatEmitter {
     return out;
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.KeyContext} keyCtx */
+  /** 输出 key token 原文形态。 */
   emitKey(keyCtx) {
     if (keyCtx.IdentifierName()) return keyCtx.IdentifierName().getText();
     if (keyCtx.NUMBER()) return keyCtx.NUMBER().getText();
@@ -435,271 +545,287 @@ export class FormatEmitter {
     return keyCtx.getText();
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.KeyContext} keyCtx */
+  /** 用于 sortKeys 的 key 规范字符串。 */
   keySortString(keyCtx) {
     return keyToString(keyCtx);
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
+  /** object 分派 compact / pretty。 */
   formatObject(ctx, depth) {
     if (this.options.compact) return this.formatObjectCompact(ctx, depth);
     return this.formatObjectPretty(ctx, depth);
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
+  /** array 分派 compact / pretty。 */
   formatArray(ctx, depth) {
     if (this.options.compact) return this.formatArrayCompact(ctx, depth);
     return this.formatArrayPretty(ctx, depth);
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
-  formatObjectCompact(ctx, depth) {
-    const openTok = ctx.start;
-    const closeTok = ctx.stop;
-    let members = ctx.member ? ctx.member() : [];
-    if (this.options.sortKeys) {
-      members = [...members].sort((a, b) =>
-        this.keySortString(a.key()).localeCompare(this.keySortString(b.key())),
-      );
+  /** 在 object format 期间启用 span 区间缓存。 */
+  withSpanCache(fn) {
+    const prev = this._spanCache;
+    this._spanCache = new Map();
+    try {
+      return fn();
+    } finally {
+      this._spanCache = prev;
     }
-
-    const useSortAnchors = this.options.sortKeys;
-    const sourceMembers = ctx.member ? ctx.member() : [];
-    const emittedHiddenIndices = useSortAnchors ? new Set() : null;
-    let out = '{';
-    const openingHidden = this.hiddenRight(openTok);
-
-    if (members.length === 0) {
-      out += this.emitHiddenCompact(openingHidden);
-      out += '}';
-      return out;
-    }
-
-    out += this.emitHiddenCompact(openingHidden);
-    if (emittedHiddenIndices) {
-      this.markHiddenEmitted(openingHidden, emittedHiddenIndices);
-    }
-
-    let lastMemberTrailingHidden = [];
-
-    for (let i = 0; i < members.length; i++) {
-      const member = members[i];
-      const keyTok = member.key().start;
-      const valCtx = member.value();
-      const valStop = this.endToken(valCtx);
-      const isLastInOutput = i === members.length - 1;
-
-      out = this.beginMemberLine(out, depth);
-
-      if (useSortAnchors) {
-        const prefixHidden = this.hiddenLeftForSortedMember(
-          keyTok,
-          member,
-          sourceMembers,
-          openTok,
-          emittedHiddenIndices,
-        );
-        out += this.emitHiddenCompact(prefixHidden);
-        if (emittedHiddenIndices) {
-          this.markHiddenEmitted(prefixHidden, emittedHiddenIndices);
-        }
-      }
-
-      out += this.emitKey(member.key());
-      out += ': ';
-      out += this.formatValue(valCtx, depth + 1);
-
-      if (useSortAnchors) {
-        out += this.memberSuffixForSortedMember(
-          valStop,
-          member,
-          sourceMembers,
-          closeTok,
-          isLastInOutput,
-          true,
-        );
-        if (isLastInOutput) {
-          lastMemberTrailingHidden = this.hiddenTokensBetween(valStop, closeTok);
-        }
-      } else {
-        const boundaryTok = i < members.length - 1 ? members[i + 1].key().start : closeTok;
-        let suffix = this.compactWhitespace(this.spanBetween(valStop, boundaryTok));
-        if (i === members.length - 1) {
-          suffix = this.stripTrailingCommaSuffix(suffix);
-        }
-        out += suffix;
-      }
-    }
-
-    if (useSortAnchors) {
-      const beforeCloseHidden = this.hiddenLeft(closeTok).filter(
-        (t) => !lastMemberTrailingHidden.some((e) => e.tokenIndex === t.tokenIndex),
-      );
-      out += this.compactWhitespace(this.emitHidden(beforeCloseHidden));
-    }
-
-    out = this.beginCloseLine(out, depth);
-    out += '}';
-    return out;
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
+  /** compact object 格式化（含 sort 注释锚定）。 */
+  formatObjectCompact(ctx, depth) {
+    return this.withSpanCache(() => {
+      const openTok = ctx.start;
+      const closeTok = ctx.stop;
+      const sourceMembers = ctx.member ? ctx.member() : [];
+      const members = this.sortMembers(sourceMembers);
+      const useSortAnchors = this.options.sortKeys;
+      const memberIdxMap = useSortAnchors ? this.buildMemberIndexMap(sourceMembers) : null;
+      const emittedHiddenIndices = useSortAnchors ? new Set() : null;
+      const buf = new TextBuf();
+      const openingHidden = this.hiddenRight(openTok);
+
+      buf.push('{');
+
+      if (members.length === 0) {
+        buf.push(this.emitHiddenCompact(openingHidden), '}');
+        return buf.toString();
+      }
+
+      buf.push(this.emitHiddenCompact(openingHidden));
+      if (emittedHiddenIndices) {
+        this.markHiddenEmitted(openingHidden, emittedHiddenIndices);
+      }
+
+      let lastMemberTrailingHidden = [];
+      const indentMember = (d) => this.indentUnit(d);
+
+      for (let i = 0; i < members.length; i++) {
+        const member = members[i];
+        const keyTok = member.key().start;
+        const valCtx = member.value();
+        const valStop = this.endToken(valCtx);
+        const isLastInOutput = i === members.length - 1;
+
+        buf.beginMemberLine(indentMember, depth);
+
+        if (useSortAnchors && memberIdxMap) {
+          const prefixHidden = this.hiddenLeftForSortedMember(
+            keyTok,
+            member,
+            sourceMembers,
+            openTok,
+            emittedHiddenIndices,
+            memberIdxMap,
+          );
+          buf.push(this.emitHiddenCompact(prefixHidden));
+          if (emittedHiddenIndices) {
+            this.markHiddenEmitted(prefixHidden, emittedHiddenIndices);
+          }
+        }
+
+        buf.push(this.emitKey(member.key()), ': ', this.formatValue(valCtx, depth + 1));
+
+        if (useSortAnchors && memberIdxMap) {
+          buf.push(
+            this.memberSuffixForSortedMember(
+              valStop,
+              member,
+              sourceMembers,
+              closeTok,
+              isLastInOutput,
+              true,
+              memberIdxMap,
+            ),
+          );
+          if (isLastInOutput) {
+            lastMemberTrailingHidden = this.hiddenTokensBetween(valStop, closeTok);
+          }
+        } else {
+          const boundaryTok = i < members.length - 1 ? members[i + 1].key().start : closeTok;
+          let suffix = this.compactWhitespace(this.spanBetween(valStop, boundaryTok));
+          if (i === members.length - 1) {
+            suffix = this.stripTrailingCommaSuffix(suffix);
+          }
+          buf.push(suffix);
+        }
+      }
+
+      if (useSortAnchors) {
+        const beforeCloseHidden = this.hiddenLeft(closeTok).filter(
+          (t) => !lastMemberTrailingHidden.some((e) => e.tokenIndex === t.tokenIndex),
+        );
+        buf.push(this.compactWhitespace(this.emitHidden(beforeCloseHidden)));
+      }
+
+      buf.beginCloseLine(indentMember, depth);
+      buf.push('}');
+      return buf.toString();
+    });
+  }
+
+  /** compact array 格式化。 */
   formatArrayCompact(ctx, depth) {
     const openTok = ctx.start;
     const closeTok = ctx.stop;
     const values = ctx.value ? ctx.value() : [];
-
-    let out = '[';
+    const buf = new TextBuf();
     const openingHidden = this.hiddenRight(openTok);
+    const indentMember = (d) => this.indentUnit(d);
+
+    buf.push('[');
 
     if (values.length === 0) {
-      out += this.emitHiddenCompact(openingHidden);
-      out += ']';
-      return out;
+      buf.push(this.emitHiddenCompact(openingHidden), ']');
+      return buf.toString();
     }
 
-    out += this.emitHiddenCompact(openingHidden);
+    buf.push(this.emitHiddenCompact(openingHidden));
 
     for (let i = 0; i < values.length; i++) {
       const valCtx = values[i];
       const valStop = this.endToken(valCtx);
       const boundaryTok = i < values.length - 1 ? values[i + 1].start : closeTok;
 
-      out = this.beginMemberLine(out, depth);
-      out += this.formatValue(valCtx, depth + 1);
+      buf.beginMemberLine(indentMember, depth);
+      buf.push(this.formatValue(valCtx, depth + 1));
 
       let suffix = this.compactWhitespace(this.spanBetween(valStop, boundaryTok));
       if (i === values.length - 1) {
         suffix = this.stripTrailingCommaSuffix(suffix);
       }
-      out += suffix;
+      buf.push(suffix);
     }
 
-    out = this.beginCloseLine(out, depth);
-    out += ']';
-    return out;
+    buf.beginCloseLine(indentMember, depth);
+    buf.push(']');
+    return buf.toString();
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.ObjectContext} ctx @param {number} depth */
+  /** pretty object 格式化（含 sort 注释锚定）。 */
   formatObjectPretty(ctx, depth) {
-    const openTok = ctx.start;
-    const closeTok = ctx.stop;
-    let members = ctx.member ? ctx.member() : [];
-    if (this.options.sortKeys) {
-      members = [...members].sort((a, b) =>
-        this.keySortString(a.key()).localeCompare(this.keySortString(b.key())),
-      );
-    }
+    return this.withSpanCache(() => {
+      const openTok = ctx.start;
+      const closeTok = ctx.stop;
+      const sourceMembers = ctx.member ? ctx.member() : [];
+      const members = this.sortMembers(sourceMembers);
+      const buf = new TextBuf();
+      const useSortAnchors = this.options.sortKeys;
+      const memberIdxMap = useSortAnchors ? this.buildMemberIndexMap(sourceMembers) : null;
 
-    let out = '{';
+      buf.push('{');
 
-    if (members.length === 0) {
-      out += this.emitHidden(this.hiddenRight(openTok));
-      out += '}';
-      return out;
-    }
-
-    const sourceMembers = ctx.member ? ctx.member() : [];
-    const useSortAnchors = this.options.sortKeys;
-    let lastMemberTrailingHidden = [];
-
-    for (let i = 0; i < members.length; i++) {
-      const member = members[i];
-      const keyTok = member.key().start;
-      out += '\n';
-      out += this.indentUnit(depth + 1);
-      out += this.emitHidden(
-        useSortAnchors
-          ? this.hiddenLeftForSortedMember(keyTok, member, sourceMembers, openTok)
-          : this.hiddenLeft(keyTok),
-      );
-      out += this.emitKey(member.key());
-      out += ': ';
-      const valCtx = member.value();
-      if (valCtx.object() || valCtx.array()) {
-        out += this.formatValue(valCtx, depth + 1);
-      } else {
-        out += this.formatPrimitiveValue(valCtx);
+      if (members.length === 0) {
+        buf.push(this.emitHidden(this.hiddenRight(openTok)), '}');
+        return buf.toString();
       }
-      const valStop = this.endToken(valCtx);
-      const isLastInOutput = i === members.length - 1;
-      if (useSortAnchors) {
-        out += this.memberSuffixForSortedMember(
-          valStop,
-          member,
-          sourceMembers,
-          closeTok,
-          isLastInOutput,
-          false,
+
+      let lastMemberTrailingHidden = [];
+
+      for (let i = 0; i < members.length; i++) {
+        const member = members[i];
+        const keyTok = member.key().start;
+        buf.push('\n', this.indentUnit(depth + 1));
+        buf.push(
+          this.emitHidden(
+            useSortAnchors && memberIdxMap
+              ? this.hiddenLeftForSortedMember(
+                  keyTok,
+                  member,
+                  sourceMembers,
+                  openTok,
+                  undefined,
+                  memberIdxMap,
+                )
+              : this.hiddenLeft(keyTok),
+          ),
         );
-        if (isLastInOutput) {
-          lastMemberTrailingHidden = this.hiddenTokensBetween(valStop, closeTok);
+        buf.push(this.emitKey(member.key()), ': ');
+        const valCtx = member.value();
+        if (valCtx.object() || valCtx.array()) {
+          buf.push(this.formatValue(valCtx, depth + 1));
+        } else {
+          buf.push(this.formatPrimitiveValue(valCtx));
         }
-      } else {
-        const trailingHidden = this.hiddenRight(valStop);
-        out += this.emitHidden(trailingHidden);
-        if (isLastInOutput) {
-          lastMemberTrailingHidden = trailingHidden;
-        }
-        if (!isLastInOutput) {
-          out += ',';
+        const valStop = this.endToken(valCtx);
+        const isLastInOutput = i === members.length - 1;
+        if (useSortAnchors && memberIdxMap) {
+          buf.push(
+            this.memberSuffixForSortedMember(
+              valStop,
+              member,
+              sourceMembers,
+              closeTok,
+              isLastInOutput,
+              false,
+              memberIdxMap,
+            ),
+          );
+          if (isLastInOutput) {
+            lastMemberTrailingHidden = this.hiddenTokensBetween(valStop, closeTok);
+          }
+        } else {
+          const trailingHidden = this.hiddenRight(valStop);
+          buf.push(this.emitHidden(trailingHidden));
+          if (isLastInOutput) {
+            lastMemberTrailingHidden = trailingHidden;
+          }
+          if (!isLastInOutput) {
+            buf.push(',');
+          }
         }
       }
-    }
 
-    out += '\n';
-    out += this.indentUnit(depth);
-    const beforeCloseHidden = this.hiddenLeft(closeTok).filter(
-      (t) => !lastMemberTrailingHidden.some((e) => e.tokenIndex === t.tokenIndex),
-    );
-    out += this.emitHidden(beforeCloseHidden);
-    out += '}';
-    return out;
+      buf.push('\n', this.indentUnit(depth));
+      const beforeCloseHidden = this.hiddenLeft(closeTok).filter(
+        (t) => !lastMemberTrailingHidden.some((e) => e.tokenIndex === t.tokenIndex),
+      );
+      buf.push(this.emitHidden(beforeCloseHidden), '}');
+      return buf.toString();
+    });
   }
 
-  /** @param {import('../../grammars/json5/Json5Parser.js').default.ArrayContext} ctx @param {number} depth */
+  /** pretty array 格式化。 */
   formatArrayPretty(ctx, depth) {
     const openTok = ctx.start;
     const closeTok = ctx.stop;
     const values = ctx.value ? ctx.value() : [];
+    const buf = new TextBuf();
 
-    let out = '[';
+    buf.push('[');
 
     if (values.length === 0) {
-      out += this.emitHidden(this.hiddenRight(openTok));
-      out += ']';
-      return out;
+      buf.push(this.emitHidden(this.hiddenRight(openTok)), ']');
+      return buf.toString();
     }
 
     let lastElementTrailingHidden = [];
 
     for (let i = 0; i < values.length; i++) {
       const valCtx = values[i];
-      out += '\n';
-      out += this.indentUnit(depth + 1);
-      out += this.emitHidden(this.hiddenLeft(valCtx.start));
+      buf.push('\n', this.indentUnit(depth + 1));
+      buf.push(this.emitHidden(this.hiddenLeft(valCtx.start)));
       if (valCtx.object() || valCtx.array()) {
-        out += this.formatValue(valCtx, depth + 1);
+        buf.push(this.formatValue(valCtx, depth + 1));
       } else {
-        out += this.formatPrimitiveValue(valCtx);
+        buf.push(this.formatPrimitiveValue(valCtx));
       }
       const trailingHidden = this.hiddenRight(this.endToken(valCtx));
-      out += this.emitHidden(trailingHidden);
+      buf.push(this.emitHidden(trailingHidden));
       if (i === values.length - 1) {
         lastElementTrailingHidden = trailingHidden;
       }
       if (i < values.length - 1) {
-        out += ',';
+        buf.push(',');
       }
     }
 
-    out += '\n';
-    out += this.indentUnit(depth);
+    buf.push('\n', this.indentUnit(depth));
     const beforeCloseHidden = this.hiddenLeft(closeTok).filter(
       (t) => !lastElementTrailingHidden.some((e) => e.tokenIndex === t.tokenIndex),
     );
-    out += this.emitHidden(beforeCloseHidden);
-    out += ']';
-    return out;
+    buf.push(this.emitHidden(beforeCloseHidden), ']');
+    return buf.toString();
   }
 }
