@@ -245,6 +245,31 @@ runCase('json parse', 'test.json.parse.json', () => JSON4.parse(jsonInput), {
 
 runCase('java8 firstClassName', 'test.java.firstClassName.txt', () => JAVA8.firstClassName(javaInput));
 
+runCase('java8 peekFirstClassName', 'test.java.peekFirstClassName.txt', () =>
+  JAVA8.peekFirstClassName(javaInput),
+);
+
+runCase(
+  'java8 peek vs strict invalid body (case)',
+  undefined,
+  () => {
+    const input = readCase('java8.peek-invalid-body.java.text');
+    const peek = JAVA8.peekFirstClassName(input);
+    if (peek !== 'BrokenUser') {
+      throw new Error(`peekFirstClassName expected BrokenUser, got ${JSON.stringify(peek)}`);
+    }
+    try {
+      JAVA8.firstClassName(input);
+      throw new Error('firstClassName expected ParseError on invalid body');
+    } catch (error) {
+      if (!(error instanceof ParseError)) {
+        throw error;
+      }
+    }
+    return peek;
+  },
+);
+
 runCase('java8 signatures', 'test.java.signatures.json', () => JAVA8.signatures(javaInput));
 
 runCase(

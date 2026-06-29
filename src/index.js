@@ -128,6 +128,16 @@
  * | `input` | string | 是   | 完整 Java 源文件 |
  *
  * - **返回**：`string | null` — 源码中第一个顶层具名类型（class/interface/enum/@interface）的简单名；无类型声明时 `null`
+ * - **说明**：完整 `compilationUnit` parse；body 语法非法时抛出 `ParseError`
+ *
+ * ### JAVA8.peekFirstClassName(input)
+ *
+ * | 参数    | 类型   | 必填 | 说明 |
+ * |---------|--------|------|------|
+ * | `input` | string | 是   | 完整 Java 源文件 |
+ *
+ * - **返回**：`string | null` — 与 `firstClassName` 相同的取名规则
+ * - **说明**：parse 至首个顶层类型 body 入口即终止，不验证 body；body 语法非法时仍可能返回类名；需 strict 校验时用 `firstClassName`
  *
  * ### JAVA8.signatures(input)
  *
@@ -189,6 +199,7 @@ import { format as json5Format, DEFAULT_FORMAT_OPTIONS } from './parser/json5/fo
 import { snowflakeId } from './parser/api/snowflake-id.js';
 import { java8ToApiSchema } from './parser/api/java8/java8-to-api-schema.js';
 import { firstClassName } from './parser/java8/first-class-name.js';
+import { peekFirstClassName } from './parser/java8/peek-first-class-name.js';
 import { signatures } from './parser/java8/signatures.js';
 
 /** @see 模块顶部文档 — ParseError */
@@ -214,10 +225,11 @@ export const JSON4 = {
 
 /**
  * Java8 源文件解析产品线：首个类名与结构化签名树。
- * @type {{ firstClassName: (input: string) => (string | null), signatures: (input: string) => import('./parser/java8/models.js').FileModel }}
+ * @type {{ firstClassName: (input: string) => (string | null), peekFirstClassName: (input: string) => (string | null), signatures: (input: string) => import('./parser/java8/models.js').FileModel }}
  */
 export const JAVA8 = {
   firstClassName,
+  peekFirstClassName,
   signatures,
 };
 

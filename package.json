@@ -1,6 +1,6 @@
 {
   "name": "antlr4_help",
-  "version": "2.5.3",
+  "version": "2.5.4",
   "description": "ANTLR 4.9.3 统一解析库：JSON5 / JSON4 / JAVA8 / API (Node + ESM)",
   "type": "module",
   "main": "src/index.js",
