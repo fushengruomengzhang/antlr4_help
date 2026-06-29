@@ -1,0 +1,516 @@
+[
+  {
+    "parentId": 0,
+    "id": "410594062375268352",
+    "key": "uuid",
+    "type": "String",
+    "check": true
+  },
+  {
+    "parentId": 0,
+    "id": "410594062375268353",
+    "key": "a",
+    "type": "Number",
+    "check": true
+  },
+  {
+    "parentId": 0,
+    "id": "410594062375268354",
+    "key": "b",
+    "type": "Number",
+    "check": true
+  },
+  {
+    "parentId": 0,
+    "id": "410594062375268355",
+    "key": "name",
+    "type": "String",
+    "check": true,
+    "desc": "用户名 支持模糊查询"
+  },
+  {
+    "parentId": 0,
+    "id": "410594062375268356",
+    "key": "age",
+    "type": "Number",
+    "check": true,
+    "desc": "年龄"
+  },
+  {
+    "parentId": 0,
+    "id": "410594062375268357",
+    "key": "child",
+    "type": "List",
+    "check": true,
+    "desc": "孩子们",
+    "children": [
+      {
+        "parentId": "410594062375268357",
+        "id": "410594062375268358",
+        "type": "Object",
+        "check": true,
+        "index": 0,
+        "desc": "用户信息",
+        "children": [
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462656",
+            "key": "uuid",
+            "type": "String",
+            "check": true
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462657",
+            "key": "a",
+            "type": "Number",
+            "check": true
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462658",
+            "key": "b",
+            "type": "Number",
+            "check": true
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462659",
+            "key": "name",
+            "type": "String",
+            "check": true,
+            "desc": "用户名 支持模糊查询"
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462660",
+            "key": "age",
+            "type": "Number",
+            "check": true,
+            "desc": "年龄"
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462661",
+            "key": "child",
+            "type": "List",
+            "check": true,
+            "desc": "孩子们",
+            "children": [
+              {
+                "parentId": "410594062379462661",
+                "id": "410594062379462662",
+                "type": "Object",
+                "check": true,
+                "index": 0,
+                "desc": "用户信息"
+              }
+            ]
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462663",
+            "key": "userDetail",
+            "type": "Object",
+            "check": true,
+            "desc": "用户详情",
+            "children": [
+              {
+                "parentId": "410594062379462663",
+                "id": "410594062379462664",
+                "key": "user",
+                "type": "Object",
+                "check": true,
+                "desc": "用户基础信息"
+              }
+            ]
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462665",
+            "key": "userDetails",
+            "type": "List",
+            "check": true,
+            "desc": "用户详情",
+            "children": [
+              {
+                "parentId": "410594062379462665",
+                "id": "410594062379462666",
+                "type": "Object",
+                "check": true,
+                "index": 0,
+                "desc": "用户详情",
+                "children": [
+                  {
+                    "parentId": "410594062379462666",
+                    "id": "410594062379462667",
+                    "key": "user",
+                    "type": "Object",
+                    "check": true,
+                    "desc": "用户基础信息"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462668",
+            "key": "userDetailGroupByName",
+            "type": "Object",
+            "check": true,
+            "desc": "用户详情",
+            "children": [
+              {
+                "parentId": "410594062379462668",
+                "id": "410594062379462669",
+                "type": "Object",
+                "check": true,
+                "index": 0,
+                "desc": "用户详情",
+                "children": [
+                  {
+                    "parentId": "410594062379462669",
+                    "id": "410594062379462670",
+                    "key": "user",
+                    "type": "Object",
+                    "check": true,
+                    "desc": "用户基础信息"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462671",
+            "key": "mlus",
+            "type": "Object",
+            "check": true,
+            "children": [
+              {
+                "parentId": "410594062379462671",
+                "id": "410594062379462672",
+                "type": "List",
+                "check": true,
+                "index": 0,
+                "desc": "用户详情",
+                "children": [
+                  {
+                    "parentId": "410594062379462672",
+                    "id": "410594062379462673",
+                    "type": "Object",
+                    "check": true,
+                    "index": 0,
+                    "desc": "用户详情",
+                    "children": [
+                      {
+                        "parentId": "410594062379462673",
+                        "id": "410594062379462674",
+                        "key": "user",
+                        "type": "Object",
+                        "check": true,
+                        "desc": "用户基础信息"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462675",
+            "key": "lmus",
+            "type": "List",
+            "check": true,
+            "children": [
+              {
+                "parentId": "410594062379462675",
+                "id": "410594062379462676",
+                "type": "Object",
+                "check": true,
+                "index": 0,
+                "desc": "用户详情",
+                "children": [
+                  {
+                    "parentId": "410594062379462676",
+                    "id": "410594062379462677",
+                    "type": "Object",
+                    "check": true,
+                    "index": 0,
+                    "desc": "用户详情",
+                    "children": [
+                      {
+                        "parentId": "410594062379462677",
+                        "id": "410594062379462678",
+                        "key": "user",
+                        "type": "Object",
+                        "check": true,
+                        "desc": "用户基础信息"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462679",
+            "key": "lmlus",
+            "type": "List",
+            "check": true,
+            "children": [
+              {
+                "parentId": "410594062379462679",
+                "id": "410594062379462680",
+                "type": "Object",
+                "check": true,
+                "index": 0,
+                "children": [
+                  {
+                    "parentId": "410594062379462680",
+                    "id": "410594062379462681",
+                    "type": "List",
+                    "check": true,
+                    "index": 0,
+                    "desc": "用户详情",
+                    "children": [
+                      {
+                        "parentId": "410594062379462681",
+                        "id": "410594062379462682",
+                        "type": "Object",
+                        "check": true,
+                        "index": 0,
+                        "desc": "用户详情",
+                        "children": [
+                          {
+                            "parentId": "410594062379462682",
+                            "id": "410594062379462683",
+                            "key": "user",
+                            "type": "Object",
+                            "check": true,
+                            "desc": "用户基础信息"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "parentId": "410594062375268358",
+            "id": "410594062379462684",
+            "key": "createTime",
+            "type": "String",
+            "check": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "parentId": 0,
+    "id": "410594062379462685",
+    "key": "userDetail",
+    "type": "Object",
+    "check": true,
+    "desc": "用户详情",
+    "children": [
+      {
+        "parentId": "410594062379462685",
+        "id": "410594062379462686",
+        "key": "user",
+        "type": "Object",
+        "check": true,
+        "desc": "用户基础信息"
+      }
+    ]
+  },
+  {
+    "parentId": 0,
+    "id": "410594062379462687",
+    "key": "userDetails",
+    "type": "List",
+    "check": true,
+    "desc": "用户详情",
+    "children": [
+      {
+        "parentId": "410594062379462687",
+        "id": "410594062379462688",
+        "type": "Object",
+        "check": true,
+        "index": 0,
+        "desc": "用户详情",
+        "children": [
+          {
+            "parentId": "410594062379462688",
+            "id": "410594062379462689",
+            "key": "user",
+            "type": "Object",
+            "check": true,
+            "desc": "用户基础信息"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "parentId": 0,
+    "id": "410594062379462690",
+    "key": "userDetailGroupByName",
+    "type": "Object",
+    "check": true,
+    "desc": "用户详情",
+    "children": [
+      {
+        "parentId": "410594062379462690",
+        "id": "410594062379462691",
+        "type": "Object",
+        "check": true,
+        "index": 0,
+        "desc": "用户详情",
+        "children": [
+          {
+            "parentId": "410594062379462691",
+            "id": "410594062379462692",
+            "key": "user",
+            "type": "Object",
+            "check": true,
+            "desc": "用户基础信息"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "parentId": 0,
+    "id": "410594062379462693",
+    "key": "mlus",
+    "type": "Object",
+    "check": true,
+    "children": [
+      {
+        "parentId": "410594062379462693",
+        "id": "410594062379462694",
+        "type": "List",
+        "check": true,
+        "index": 0,
+        "desc": "用户详情",
+        "children": [
+          {
+            "parentId": "410594062379462694",
+            "id": "410594062379462695",
+            "type": "Object",
+            "check": true,
+            "index": 0,
+            "desc": "用户详情",
+            "children": [
+              {
+                "parentId": "410594062379462695",
+                "id": "410594062379462696",
+                "key": "user",
+                "type": "Object",
+                "check": true,
+                "desc": "用户基础信息"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "parentId": 0,
+    "id": "410594062379462697",
+    "key": "lmus",
+    "type": "List",
+    "check": true,
+    "children": [
+      {
+        "parentId": "410594062379462697",
+        "id": "410594062379462698",
+        "type": "Object",
+        "check": true,
+        "index": 0,
+        "desc": "用户详情",
+        "children": [
+          {
+            "parentId": "410594062379462698",
+            "id": "410594062379462699",
+            "type": "Object",
+            "check": true,
+            "index": 0,
+            "desc": "用户详情",
+            "children": [
+              {
+                "parentId": "410594062379462699",
+                "id": "410594062379462700",
+                "key": "user",
+                "type": "Object",
+                "check": true,
+                "desc": "用户基础信息"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "parentId": 0,
+    "id": "410594062379462701",
+    "key": "lmlus",
+    "type": "List",
+    "check": true,
+    "children": [
+      {
+        "parentId": "410594062379462701",
+        "id": "410594062379462702",
+        "type": "Object",
+        "check": true,
+        "index": 0,
+        "children": [
+          {
+            "parentId": "410594062379462702",
+            "id": "410594062379462703",
+            "type": "List",
+            "check": true,
+            "index": 0,
+            "desc": "用户详情",
+            "children": [
+              {
+                "parentId": "410594062379462703",
+                "id": "410594062379462704",
+                "type": "Object",
+                "check": true,
+                "index": 0,
+                "desc": "用户详情",
+                "children": [
+                  {
+                    "parentId": "410594062379462704",
+                    "id": "410594062379462705",
+                    "key": "user",
+                    "type": "Object",
+                    "check": true,
+                    "desc": "用户基础信息"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "parentId": 0,
+    "id": "410594062379462706",
+    "key": "createTime",
+    "type": "String",
+    "check": true
+  }
+]

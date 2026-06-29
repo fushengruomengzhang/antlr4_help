@@ -23,6 +23,24 @@ export default class Json5ParserListener extends antlr4.tree.ParseTreeListener {
 	}
 
 
+	// Enter a parse tree produced by Json5Parser#tripleSingleString.
+	enterTripleSingleString(ctx) {
+	}
+
+	// Exit a parse tree produced by Json5Parser#tripleSingleString.
+	exitTripleSingleString(ctx) {
+	}
+
+
+	// Enter a parse tree produced by Json5Parser#tripleDoubleString.
+	enterTripleDoubleString(ctx) {
+	}
+
+	// Exit a parse tree produced by Json5Parser#tripleDoubleString.
+	exitTripleDoubleString(ctx) {
+	}
+
+
 	// Enter a parse tree produced by Json5Parser#literal.
 	enterLiteral(ctx) {
 	}

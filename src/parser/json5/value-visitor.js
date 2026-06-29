@@ -1,10 +1,10 @@
 import { decodeJsonString, encodeJsonString } from '../json/string-utils.js';
 
-/** @param {string} tokenText STRING / TRIPLE token including quotes */
-export function decodeJson5String(tokenText) {
-  if (tokenText.startsWith('"""') || tokenText.startsWith("'''")) {
-    const inner = tokenText.slice(3, -3);
-    return inner.replace(/\\(['"\\/bfnrt])/g, (_, c) => {
+/** @param {string} bodyText triple-quoted string body (no delimiters) */
+export function decodeTripleBody(bodyText) {
+  if (!bodyText) return '';
+  return bodyText
+    .replace(/\\(['"\\/bfnrt])/g, (_, c) => {
       switch (c) {
         case 'b': return '\b';
         case 'f': return '\f';
@@ -13,7 +13,15 @@ export function decodeJson5String(tokenText) {
         case 't': return '\t';
         default: return c;
       }
-    }).replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+    })
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
+/** @param {string} tokenText STRING token including quotes */
+export function decodeJson5String(tokenText) {
+  if (tokenText.startsWith('"""') || tokenText.startsWith("'''")) {
+    const inner = tokenText.slice(3, -3);
+    return decodeTripleBody(inner);
   }
   const quote = tokenText[0];
   if (quote === '"' || quote === "'") {
@@ -21,6 +29,13 @@ export function decodeJson5String(tokenText) {
     return decodeJsonString(`"${tokenText.slice(1, -1).replace(/"/g, '\\"')}"`);
   }
   return tokenText;
+}
+
+/** @param {import('../../grammars/json5/Json5Parser.js').default.TripleSingleStringContext | import('../../grammars/json5/Json5Parser.js').default.TripleDoubleStringContext} ctx */
+export function tripleStringBodyText(ctx) {
+  const parts = ctx.TRIPLE_S_BODY ? ctx.TRIPLE_S_BODY() : ctx.TRIPLE_D_BODY();
+  if (!parts || parts.length === 0) return '';
+  return parts.map((t) => t.getText()).join('');
 }
 
 export function encodeDoubleQuotedString(value) {
@@ -52,9 +67,12 @@ export function parseJson5Number(text) {
 export function visitValue(ctx) {
   if (ctx.object()) return visitObject(ctx.object());
   if (ctx.array()) return visitArray(ctx.array());
-  if (ctx.STRING() || ctx.TRIPLE_DOUBLE_STRING() || ctx.TRIPLE_SINGLE_STRING()) {
-    const tok = ctx.STRING() || ctx.TRIPLE_DOUBLE_STRING() || ctx.TRIPLE_SINGLE_STRING();
-    return decodeJson5String(tok.getText());
+  if (ctx.STRING()) return decodeJson5String(ctx.STRING().getText());
+  if (ctx.tripleSingleString()) {
+    return decodeTripleBody(tripleStringBodyText(ctx.tripleSingleString()));
+  }
+  if (ctx.tripleDoubleString()) {
+    return decodeTripleBody(tripleStringBodyText(ctx.tripleDoubleString()));
   }
   if (ctx.NUMBER()) return parseJson5Number(ctx.NUMBER().getText());
   if (ctx.TRUE()) return true;

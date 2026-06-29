@@ -3,6 +3,7 @@ import {
   decodeJson5String,
   encodeDoubleQuotedString,
   keyToString,
+  tripleStringBodyText,
 } from './value-visitor.js';
 
 const HIDDEN = antlr4.Token.HIDDEN_CHANNEL;
@@ -176,8 +177,8 @@ export class FormatEmitter {
   /** @param {import('../../grammars/json5/Json5Parser.js').default.ValueContext} ctx */
   emitSourceValue(ctx) {
     if (ctx.STRING()) return ctx.STRING().getText();
-    if (ctx.TRIPLE_DOUBLE_STRING()) return ctx.TRIPLE_DOUBLE_STRING().getText();
-    if (ctx.TRIPLE_SINGLE_STRING()) return ctx.TRIPLE_SINGLE_STRING().getText();
+    if (ctx.tripleSingleString()) return this.emitTripleSingleString(ctx.tripleSingleString());
+    if (ctx.tripleDoubleString()) return this.emitTripleDoubleString(ctx.tripleDoubleString());
     if (ctx.NUMBER()) return ctx.NUMBER().getText();
     if (ctx.TRUE()) return 'true';
     if (ctx.FALSE()) return 'false';
@@ -191,12 +192,11 @@ export class FormatEmitter {
     if (ctx.STRING()) {
       return encodeDoubleQuotedString(decodeJson5String(ctx.STRING().getText()));
     }
-    if (ctx.TRIPLE_DOUBLE_STRING()) {
-      return this.formatTriple(ctx.TRIPLE_DOUBLE_STRING().getText(), '"""');
+    if (ctx.tripleSingleString()) {
+      return this.emitTripleSingleString(ctx.tripleSingleString());
     }
-    if (ctx.TRIPLE_SINGLE_STRING()) {
-      const decoded = decodeJson5String(ctx.TRIPLE_SINGLE_STRING().getText());
-      return this.formatTripleFromDecoded(decoded);
+    if (ctx.tripleDoubleString()) {
+      return this.emitTripleDoubleString(ctx.tripleDoubleString());
     }
     if (ctx.NUMBER()) return ctx.NUMBER().getText();
     if (ctx.TRUE()) return 'true';
@@ -206,19 +206,24 @@ export class FormatEmitter {
     return ctx.getText();
   }
 
-  /** @param {string} decoded inner content without delimiters */
-  formatTripleFromDecoded(decoded) {
-    if (!decoded.includes('\n') && !decoded.includes('\r')) {
-      return `"""${decoded.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"""`;
-    }
-    const lines = decoded.split(/\r\n|\n|\r/);
-    return `"""\n${lines.join('\n')}\n"""`;
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.TripleSingleStringContext} ctx */
+  emitTripleSingleString(ctx) {
+    const openTok = ctx.TRIPLE_S_OPEN().symbol;
+    let out = openTok.text;
+    out += this.emitHidden(this.hiddenRight(openTok));
+    out += tripleStringBodyText(ctx);
+    out += ctx.TRIPLE_S_CLOSE().symbol.text;
+    return out;
   }
 
-  /** @param {string} tokenText full token including delimiters @param {string} delim */
-  formatTriple(tokenText, delim) {
-    const decoded = decodeJson5String(tokenText);
-    return this.formatTripleFromDecoded(decoded);
+  /** @param {import('../../grammars/json5/Json5Parser.js').default.TripleDoubleStringContext} ctx */
+  emitTripleDoubleString(ctx) {
+    const openTok = ctx.TRIPLE_D_OPEN().symbol;
+    let out = openTok.text;
+    out += this.emitHidden(this.hiddenRight(openTok));
+    out += tripleStringBodyText(ctx);
+    out += ctx.TRIPLE_D_CLOSE().symbol.text;
+    return out;
   }
 
   /** @param {import('../../grammars/json5/Json5Parser.js').default.KeyContext} keyCtx */

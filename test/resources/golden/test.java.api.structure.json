@@ -1,0 +1,400 @@
+[
+  {
+    "type": "String",
+    "check": false,
+    "key": "uuid"
+  },
+  {
+    "type": "Number",
+    "check": false,
+    "key": "a"
+  },
+  {
+    "type": "Number",
+    "check": false,
+    "key": "b"
+  },
+  {
+    "type": "String",
+    "check": true,
+    "key": "name",
+    "desc": "用户名 支持模糊查询"
+  },
+  {
+    "type": "Number",
+    "check": false,
+    "key": "age",
+    "desc": "年龄"
+  },
+  {
+    "type": "List",
+    "check": false,
+    "key": "child",
+    "desc": "孩子们",
+    "children": [
+      {
+        "type": "Object",
+        "check": false,
+        "index": 0,
+        "desc": "用户信息",
+        "children": [
+          {
+            "type": "String",
+            "check": false,
+            "key": "uuid"
+          },
+          {
+            "type": "Number",
+            "check": false,
+            "key": "a"
+          },
+          {
+            "type": "Number",
+            "check": false,
+            "key": "b"
+          },
+          {
+            "type": "String",
+            "check": true,
+            "key": "name",
+            "desc": "用户名 支持模糊查询"
+          },
+          {
+            "type": "Number",
+            "check": false,
+            "key": "age",
+            "desc": "年龄"
+          },
+          {
+            "type": "List",
+            "check": false,
+            "key": "child",
+            "desc": "孩子们",
+            "children": [
+              {
+                "type": "Object",
+                "check": false,
+                "index": 0,
+                "desc": "用户信息"
+              }
+            ]
+          },
+          {
+            "type": "Object",
+            "check": false,
+            "key": "userDetail",
+            "desc": "用户详情",
+            "children": [
+              {
+                "type": "Object",
+                "check": false,
+                "key": "user",
+                "desc": "用户基础信息"
+              }
+            ]
+          },
+          {
+            "type": "List",
+            "check": false,
+            "key": "userDetails",
+            "desc": "用户详情",
+            "children": [
+              {
+                "type": "Object",
+                "check": false,
+                "index": 0,
+                "desc": "用户详情",
+                "children": [
+                  {
+                    "type": "Object",
+                    "check": false,
+                    "key": "user",
+                    "desc": "用户基础信息"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Object",
+            "check": false,
+            "key": "userDetailGroupByName",
+            "desc": "用户详情",
+            "children": [
+              {
+                "type": "Object",
+                "check": false,
+                "index": 0,
+                "desc": "用户详情",
+                "children": [
+                  {
+                    "type": "Object",
+                    "check": false,
+                    "key": "user",
+                    "desc": "用户基础信息"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Object",
+            "check": false,
+            "key": "mlus",
+            "children": [
+              {
+                "type": "List",
+                "check": false,
+                "index": 0,
+                "desc": "用户详情",
+                "children": [
+                  {
+                    "type": "Object",
+                    "check": false,
+                    "index": 0,
+                    "desc": "用户详情",
+                    "children": [
+                      {
+                        "type": "Object",
+                        "check": false,
+                        "key": "user",
+                        "desc": "用户基础信息"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "List",
+            "check": false,
+            "key": "lmus",
+            "children": [
+              {
+                "type": "Object",
+                "check": false,
+                "index": 0,
+                "desc": "用户详情",
+                "children": [
+                  {
+                    "type": "Object",
+                    "check": false,
+                    "index": 0,
+                    "desc": "用户详情",
+                    "children": [
+                      {
+                        "type": "Object",
+                        "check": false,
+                        "key": "user",
+                        "desc": "用户基础信息"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "List",
+            "check": false,
+            "key": "lmlus",
+            "children": [
+              {
+                "type": "Object",
+                "check": false,
+                "index": 0,
+                "children": [
+                  {
+                    "type": "List",
+                    "check": false,
+                    "index": 0,
+                    "desc": "用户详情",
+                    "children": [
+                      {
+                        "type": "Object",
+                        "check": false,
+                        "index": 0,
+                        "desc": "用户详情",
+                        "children": [
+                          {
+                            "type": "Object",
+                            "check": false,
+                            "key": "user",
+                            "desc": "用户基础信息"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "String",
+            "check": false,
+            "key": "createTime"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "Object",
+    "check": false,
+    "key": "userDetail",
+    "desc": "用户详情",
+    "children": [
+      {
+        "type": "Object",
+        "check": false,
+        "key": "user",
+        "desc": "用户基础信息"
+      }
+    ]
+  },
+  {
+    "type": "List",
+    "check": false,
+    "key": "userDetails",
+    "desc": "用户详情",
+    "children": [
+      {
+        "type": "Object",
+        "check": false,
+        "index": 0,
+        "desc": "用户详情",
+        "children": [
+          {
+            "type": "Object",
+            "check": false,
+            "key": "user",
+            "desc": "用户基础信息"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "Object",
+    "check": false,
+    "key": "userDetailGroupByName",
+    "desc": "用户详情",
+    "children": [
+      {
+        "type": "Object",
+        "check": false,
+        "index": 0,
+        "desc": "用户详情",
+        "children": [
+          {
+            "type": "Object",
+            "check": false,
+            "key": "user",
+            "desc": "用户基础信息"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "Object",
+    "check": false,
+    "key": "mlus",
+    "children": [
+      {
+        "type": "List",
+        "check": false,
+        "index": 0,
+        "desc": "用户详情",
+        "children": [
+          {
+            "type": "Object",
+            "check": false,
+            "index": 0,
+            "desc": "用户详情",
+            "children": [
+              {
+                "type": "Object",
+                "check": false,
+                "key": "user",
+                "desc": "用户基础信息"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "List",
+    "check": false,
+    "key": "lmus",
+    "children": [
+      {
+        "type": "Object",
+        "check": false,
+        "index": 0,
+        "desc": "用户详情",
+        "children": [
+          {
+            "type": "Object",
+            "check": false,
+            "index": 0,
+            "desc": "用户详情",
+            "children": [
+              {
+                "type": "Object",
+                "check": false,
+                "key": "user",
+                "desc": "用户基础信息"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "List",
+    "check": false,
+    "key": "lmlus",
+    "children": [
+      {
+        "type": "Object",
+        "check": false,
+        "index": 0,
+        "children": [
+          {
+            "type": "List",
+            "check": false,
+            "index": 0,
+            "desc": "用户详情",
+            "children": [
+              {
+                "type": "Object",
+                "check": false,
+                "index": 0,
+                "desc": "用户详情",
+                "children": [
+                  {
+                    "type": "Object",
+                    "check": false,
+                    "key": "user",
+                    "desc": "用户基础信息"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "String",
+    "check": false,
+    "key": "createTime"
+  }
+]

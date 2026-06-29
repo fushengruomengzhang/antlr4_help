@@ -58,6 +58,8 @@ package com.zhangfusheng.cn.model;
     public class UserDetail {
       @ApiModelProperty("用户基础信息")
       private TbUser user;
+
+      private UserP userP;
     }
 
     public class UserP extends  User {

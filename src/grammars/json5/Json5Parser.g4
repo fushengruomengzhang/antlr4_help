@@ -18,13 +18,21 @@ value
     : object
     | array
     | STRING
-    | TRIPLE_DOUBLE_STRING
-    | TRIPLE_SINGLE_STRING
+    | tripleSingleString
+    | tripleDoubleString
     | NUMBER              // 纯数字：123, 1.2, 0x10, -5
     | TRUE
     | FALSE
     | NULL
     | literal             // 特殊字面量：Infinity, NaN, +Infinity, -NaN
+    ;
+
+tripleSingleString
+    : TRIPLE_S_OPEN TRIPLE_S_BODY* TRIPLE_S_CLOSE
+    ;
+
+tripleDoubleString
+    : TRIPLE_D_OPEN TRIPLE_D_BODY* TRIPLE_D_CLOSE
     ;
 
 // 特殊字面量 - 完全独立于 NUMBER
