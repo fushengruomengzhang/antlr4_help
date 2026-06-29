@@ -94,27 +94,51 @@ The runner SHALL support additional fixtures under `test/resources/cases/` for f
 
 #### Scenario: Sort compact no duplicate members
 
-- **WHEN** `json5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-compact.text`
+- **WHEN** `JSON5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-compact.text`
 - **THEN** the case passes assert checks that each member value appears exactly once and `// about b` is preserved
 
 #### Scenario: Sort inline comment comma before comment
 
-- **WHEN** `json5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-inline-comment.text`
+- **WHEN** `JSON5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-inline-comment.text`
 - **THEN** the case passes asserting output includes `"age": 18, // 年龄`
 
 #### Scenario: Sort compact opening comment assert
 
-- **WHEN** `json5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-compact-opening.text`
+- **WHEN** `JSON5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-compact-opening.text`
 - **THEN** the case passes asserting output includes `{ // head`
 
 #### Scenario: Sort compact no blank lines assert
 
-- **WHEN** `json5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-compact-no-blank.text`
+- **WHEN** `JSON5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-compact-no-blank.text`
 - **THEN** the case passes asserting output does not contain `\n\n`
+
+### Requirement: JSON5 sort prefix comment case fixtures
+
+The runner SHALL process additional fixtures under `test/resources/cases/` for sort+compact member prefix comment anchoring.
+
+#### Scenario: Sort prefix comment 中文 key assert
+- **WHEN** `JSON5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-prefix-comment.text`
+- **THEN** the case passes asserting `// 中文 key` appears before `中文字段` and not before `"$key"`
+
+#### Scenario: Sort prefix comment unicode assert
+- **WHEN** `JSON5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-prefix-unicode.text`
+- **THEN** the case passes asserting `// unicode` appears before `"unicode"` and not before `"a"` or `"b"`
+
+#### Scenario: Sort prefix newline assert
+- **WHEN** `JSON5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-prefix-newline.text`
+- **THEN** the case passes asserting prefix comment and key are not glued (no `下划线"_private"` substring)
+
+### Requirement: JSON5 sort prefix newline case fixture
+
+The runner SHALL process an additional fixture under `test/resources/cases/` for sort+compact prefix comment newline preservation when the previous member has a trailing inline comment.
+
+#### Scenario: Sort prefix newline after trailing inline assert
+- **WHEN** `JSON5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-prefix-newline.text`
+- **THEN** the case passes asserting `// 下划线` and `"_private"` appear on separate lines (output MUST NOT contain `下划线"_private"`)
 
 #### Scenario: Invalid JSON5 expectError
 
-- **WHEN** `json5.validate` is called on `cases/json5.invalid.text`
+- **WHEN** `JSON5.validate` is called on `cases/json5.invalid.text`
 - **THEN** the case passes with `expectError` and `ParseError.language === 'json5'`
 
 ### Requirement: JSON5 triple-quote case fixtures
@@ -123,22 +147,39 @@ The runner SHALL process additional fixtures under `test/resources/cases/` for t
 
 #### Scenario: Triple opener line comment parse assert
 
-- **WHEN** json5.parse runs on `cases/json5.triple-opener-line.text`
+- **WHEN** JSON5.parse runs on `cases/json5.triple-opener-line.text`
 - **THEN** a case passes asserting the parsed value does not contain the opener-line comment text
 
 #### Scenario: Triple unclosed expectError
 
-- **WHEN** json5.validate runs on `cases/json5.triple-unclosed.text`
+- **WHEN** JSON5.validate runs on `cases/json5.triple-unclosed.text`
 - **THEN** the case passes with `expectError` and `ParseError.language === 'json5'`
 
 #### Scenario: Triple delimiter mismatch expectError
 
-- **WHEN** json5.validate runs on `cases/json5.triple-mismatch.text`
+- **WHEN** JSON5.validate runs on `cases/json5.triple-mismatch.text`
 - **THEN** the case passes with `expectError`
+
+### Requirement: JSON5 sort section inline case fixture
+
+The runner SHALL process an additional fixture under `test/resources/cases/` for sort+compact trailing inline preservation when the next member has a section prefix comment.
+
+#### Scenario: Sort section inline assert
+
+- **WHEN** `JSON5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-section-inline.text`
+- **THEN** the case passes asserting output includes `"age": 18, // 年龄` and `"score": 99.5, // 分数`
+
+### Requirement: JSON5 sort compact layout parity case fixture
+
+The runner SHALL process an additional fixture under `test/resources/cases/` for sort+compact layout parity (no whitespace-only lines between members).
+
+#### Scenario: Sort compact gap no blank lines assert
+- **WHEN** `JSON5.format` is called with `{ sortKeys: true, compact: true }` on `cases/json5.sort-compact-gap.text`
+- **THEN** the case passes asserting output has no whitespace-only lines and preserves inline trailing comments on the same line as values
 
 ### Requirement: JSON5 fixture coverage
 
-The runner SHALL process `test/resources/test.json5.text` with json5 APIs and produce five output files on success. The compact format case SHALL compare output against `test/resources/golden/test.json5.format.compact.text` before writing. The golden file SHALL include the opener-line comment on the `names` triple-quoted field (`''' // 三引号注释`).
+The runner SHALL process `test/resources/test.json5.text` with JSON5 APIs and produce five output files on success. The compact format case SHALL compare output against `test/resources/golden/test.json5.format.compact.text` before writing. The golden file SHALL include the opener-line comment on the `names` triple-quoted field (`''' // 三引号注释`).
 
 #### Scenario: JSON5 validate success
 
@@ -147,23 +188,24 @@ The runner SHALL process `test/resources/test.json5.text` with json5 APIs and pr
 
 #### Scenario: JSON5 parse output
 
-- **WHEN** json5.parse succeeds on `test.json5.text`
+- **WHEN** JSON5.parse succeeds on `test.json5.text`
 - **THEN** the runner writes pretty-printed JSON to `test/resources/out/test.json5.parse.json`
 
 #### Scenario: JSON5 format default
 
-- **WHEN** json5.format is called with default options on `test.json5.text`
+- **WHEN** JSON5.format is called with default options on `test.json5.text`
 - **THEN** the runner writes the formatted string to `test/resources/out/test.json5.format.text`
 
 #### Scenario: JSON5 format with sortKeys and compact
 
-- **WHEN** json5.format is called with `{ sortKeys: true, compact: true }` on `test.json5.text`
+- **WHEN** JSON5.format is called with `{ sortKeys: true, compact: true }` on `test.json5.text`
 - **THEN** the runner writes the formatted string to `test/resources/out/test.json5.format.sorted.text`
-- **AND** sorted output for fields that had inline trailing comments in input SHOULD use `, // comment` on the same line as the value where compact golden does (e.g. `"age": 18, // 年龄`)
+- **AND** the case passes asserting output includes `"age": 18, // 年龄`
+- **AND** the case passes asserting output has no whitespace-only lines (layout parity with compact intent)
 
 #### Scenario: JSON5 format with compact golden
 
-- **WHEN** json5.format is called with `{ compact: true }` on `test.json5.text` and output matches golden after normalization
+- **WHEN** JSON5.format is called with `{ compact: true }` on `test.json5.text` and output matches golden after normalization
 - **THEN** the runner writes the formatted string to `test/resources/out/test.json5.format.compact.text`
 
 ### Requirement: JSON fixture coverage
@@ -177,8 +219,8 @@ The runner SHALL process `test/resources/test.json.text` containing valid standa
 
 #### Scenario: JSON parse output
 
-- **WHEN** json.parse succeeds on `test.json.text`
-- **THEN** the runner writes pretty-printed JSON to `test/resources/out/test.json.parse.json`
+- **WHEN** JSON4.parse succeeds on `test.json.text`
+- **THEN** the runner writes pretty-printed JSON to `test/resources/out/test.JSON4.parse.json`
 
 #### Scenario: JSON fixture includes numeric string key
 
@@ -187,30 +229,30 @@ The runner SHALL process `test/resources/test.json.text` containing valid standa
 
 #### Scenario: JSON parse preserves numeric string key
 
-- **WHEN** json.parse succeeds on `test.json.text`
+- **WHEN** JSON4.parse succeeds on `test.json.text`
 - **THEN** the parse result satisfies `result["1"] === "数字key"`
 
 ### Requirement: Java8 fixture coverage
 
-The runner SHALL process `test/resources/test.java.text` with java8 APIs.
+The runner SHALL process `test/resources/test.java.text` with JAVA8 APIs.
 
 #### Scenario: Java8 first class name
 
-- **WHEN** java8.firstClassName is called on `test.java.text`
+- **WHEN** JAVA8.firstClassName is called on `test.java.text`
 - **THEN** the runner writes the result to `test/resources/out/test.java.firstClassName.txt`
 
 #### Scenario: Java8 signatures output
 
-- **WHEN** java8.signatures is called on `test.java.text`
+- **WHEN** JAVA8.signatures is called on `test.java.text`
 - **THEN** the runner writes pretty-printed FileModel JSON to `test/resources/out/test.java.signatures.json`
 
 ### Requirement: Java8 toApiSchema fixture coverage
 
-The integration runner SHALL process `test/resources/test.java.text` with `api.java8ToApiSchema` and validate output via structure assertions (MUST NOT compare `id` or `parentId` values against golden).
+The integration runner SHALL process `test/resources/test.java.text` with `API.java8ToApiSchema` and validate output via structure assertions (MUST NOT compare `id` or `parentId` values against golden).
 
 #### Scenario: toApiSchema writes inspectable output
 
-- **WHEN** `api.java8ToApiSchema` succeeds on `test.java.text` with `{ rootClass: 'User' }` (or equivalent default root)
+- **WHEN** `API.java8ToApiSchema` succeeds on `test.java.text` with `{ rootClass: 'User' }` (or equivalent default root)
 - **THEN** the runner writes pretty-printed JSON to `test/resources/out/test.java.api.json`
 
 #### Scenario: Structure golden match
@@ -220,27 +262,27 @@ The integration runner SHALL process `test/resources/test.java.text` with `api.j
 
 #### Scenario: Id uniqueness assert
 
-- **WHEN** `api.java8ToApiSchema` succeeds on `test.java.text`
+- **WHEN** `API.java8ToApiSchema` succeeds on `test.java.text`
 - **THEN** the case `assert` callback verifies every node has non-empty string `id` and all collected ids are unique
 
 #### Scenario: check semantics on fixture
 
-- **WHEN** `api.java8ToApiSchema` runs on `test.java.text` for root `User`
+- **WHEN** `API.java8ToApiSchema` runs on `test.java.text` for root `User`
 - **THEN** the `name` field node has `check: true` and the `age` field node has `check: false`
 
 #### Scenario: toApiSchema failure no out write
 
-- **WHEN** `api.java8ToApiSchema` throws (e.g. missing root class)
+- **WHEN** `API.java8ToApiSchema` throws (e.g. missing root class)
 - **THEN** the case fails and no `test.java.api.json` is written under `test/resources/out/`
 
 #### Scenario: UserP inherits User fields in structure
 
-- **WHEN** `api.java8ToApiSchema` runs on `test.java.text` for root `User`
+- **WHEN** `API.java8ToApiSchema` runs on `test.java.text` for root `User`
 - **THEN** structure golden 中 `userDetail.userP`（或等价路径）下含来自 `User` 的 field 节点（如 `name`）及 `UserP` 自有 field（如 `id`）
 
 #### Scenario: Self-ref child excludes nested child
 
-- **WHEN** `api.java8ToApiSchema` runs on `test.java.text` for root `User`
+- **WHEN** `API.java8ToApiSchema` runs on `test.java.text` for root `User`
 - **THEN** `child` List 模板内层 `User` 节点含 `name` 等 field，但 **不含** 嵌套 `child` 字段节点
 
 ### Requirement: Runner continues on per-case errors

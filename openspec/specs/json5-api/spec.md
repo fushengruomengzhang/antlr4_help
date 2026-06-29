@@ -7,51 +7,51 @@
 
 ### Requirement: JSON5 快速验证
 
-项目 SHALL 提供 `json5.validate(input: string): void`，仅执行词法与语法分析；输入合法时不返回值，非法时抛出 ParseError。
+项目 SHALL 提供 `JSON5.validate(input: string): void`，仅执行词法与语法分析；输入合法时不返回值，非法时抛出 ParseError。
 
 #### Scenario: 合法 JSON5 验证通过
-- **WHEN** 对 `{ name: "foo", }` 调用 `json5.validate`
+- **WHEN** 对 `{ name: "foo", }` 调用 `JSON5.validate`
 - **THEN** 不抛出异常
 
 #### Scenario: 非法 JSON5 验证失败
-- **WHEN** 对 `{ name: }` 调用 `json5.validate`
+- **WHEN** 对 `{ name: }` 调用 `JSON5.validate`
 - **THEN** 抛出 ParseError，且包含 `line`、`column`、`message`
 
 ### Requirement: JSON5 解析为对象
 
-项目 SHALL 提供 `json5.parse(input: string): unknown`，将合法 JSON5 字符串转换为 JavaScript 值（object、array、string、number、boolean、null）；SHALL 支持 JSON5 扩展（无引号 key、尾逗号、注释、Infinity/NaN、hex 数字等）。注释在 parse 结果中 MUST NOT 出现。
+项目 SHALL 提供 `JSON5.parse(input: string): unknown`，将合法 JSON5 字符串转换为 JavaScript 值（object、array、string、number、boolean、null）；SHALL 支持 JSON5 扩展（无引号 key、尾逗号、注释、Infinity/NaN、hex 数字等）。注释在 parse 结果中 MUST NOT 出现。
 
 #### Scenario: 对象解析
-- **WHEN** 对 `{ a: 1, b: "x" }` 调用 `json5.parse`
+- **WHEN** 对 `{ a: 1, b: "x" }` 调用 `JSON5.parse`
 - **THEN** 返回 `{ a: 1, b: "x" }`
 
 #### Scenario: 特殊字面量解析
-- **WHEN** 对 `{ n: Infinity, x: NaN }` 调用 `json5.parse`
+- **WHEN** 对 `{ n: Infinity, x: NaN }` 调用 `JSON5.parse`
 - **THEN** 返回对象且 `n` 为 `Infinity`、`x` 为 `NaN`
 
 #### Scenario: 非法输入解析失败
-- **WHEN** 对语法非法字符串调用 `json5.parse`
+- **WHEN** 对语法非法字符串调用 `JSON5.parse`
 - **THEN** 抛出 ParseError
 
 ### Requirement: JSON5 格式化
 
-项目 SHALL 提供 `json5.format(input: string, options?: FormatOptions): string`，在输入合法的前提下输出格式化后的 JSON5 字符串。FormatOptions SHALL 支持：`indent`（`{ type: 'space', size: number }` 或 `{ type: 'tab' }`，默认 2 空格）、`sortKeys`（boolean，默认 `false`）、`compact`（boolean，默认 `false`）。
+项目 SHALL 提供 `JSON5.format(input: string, options?: FormatOptions): string`，在输入合法的前提下输出格式化后的 JSON5 字符串。FormatOptions SHALL 支持：`indent`（`{ type: 'space', size: number }` 或 `{ type: 'tab' }`，默认 2 空格）、`sortKeys`（boolean，默认 `false`）、`compact`（boolean，默认 `false`）。
 
 #### Scenario: 默认格式化布局
-- **WHEN** 对含嵌套对象的 JSON5 调用 `json5.format` 且不传 options
+- **WHEN** 对含嵌套对象的 JSON5 调用 `JSON5.format` 且不传 options
 - **THEN** 输出使用 2 空格缩进且结构换行清晰
 
 #### Scenario: Tab 缩进配置
-- **WHEN** 调用 `json5.format(input, { indent: { type: 'tab' } })`
+- **WHEN** 调用 `JSON5.format(input, { indent: { type: 'tab' } })`
 - **THEN** 输出使用 Tab 作为缩进字符
 
 #### Scenario: compact 默认关闭
-- **WHEN** 调用 `json5.format(input)` 且不传 `compact`
+- **WHEN** 调用 `JSON5.format(input)` 且不传 `compact`
 - **THEN** 行为与引入 compact 前一致（含字符串双引号规范化）
 
 ### Requirement: JSON5 format compact 模式
 
-当 `compact: true` 时，format SHALL 在保留注释锚定规则（与默认模式相同）的前提下输出紧凑布局：容器头注释与 `{`/`[` 同行（若存在）；member 行尾注释与 value 同行；SHALL NOT 在 member 之间插入多余空行。字符串 value（STRING、TRIPLE_DOUBLE_STRING、TRIPLE_SINGLE_STRING）SHALL 保留输入 token 原文形态（含单引号、`'''`、行续接反斜杠），SHALL NOT 应用「JSON5 format 字符串 value 规范」中的引号转换。尾逗号移除、key 形态保留、`indent` 与 `sortKeys` 规则仍适用。当 `sortKeys: true` 与 `compact: true` 同时启用时，member 前缀注释 MUST 经 `hiddenLeft(key)` 锚定；member 后缀（逗号、行尾 inline 注释、换行）MUST 经 `spanBetween(valStop, sourceNextKey)` 收集，其中 `sourceNextKey` 为该 member 在**源码**中的下一项 key（或容器 close），MUST NOT 使用排序后下一项 key 作为区间终点；输出 MUST NOT 重复 emit 同一 member。非末项 member 的行尾 inline 注释（源码形态 `value, // ...`）MUST 与 value 同行输出，且逗号 MUST 位于注释之前（`, // ...`）。当 `sortKeys: true` 与 `compact: true` 同时启用时，compact 布局规则（容器头注释与 `{`/`[` 同行、member 间无多余空行）MUST 仍然适用；容器头注释（位于 `{`/`[` 与源码首个 member key 之间）MUST NOT 因 key 排序而附着到任意 member 的 prefix。
+当 `compact: true` 时，format SHALL 在保留注释锚定规则（与默认模式相同）的前提下输出紧凑布局：容器头注释与 `{`/`[` 同行（若存在）；member 行尾注释与 value 同行；SHALL NOT 在 member 之间插入多余空行。字符串 value（STRING、TRIPLE_DOUBLE_STRING、TRIPLE_SINGLE_STRING）SHALL 保留输入 token 原文形态（含单引号、`'''`、行续接反斜杠），SHALL NOT 应用「JSON5 format 字符串 value 规范」中的引号转换。尾逗号移除、key 形态保留、`indent` 与 `sortKeys` 规则仍适用。当 `sortKeys: true` 与 `compact: true` 同时启用时，member 前缀注释 MUST 经 `hiddenLeft(key)` 锚定；member 后缀（逗号、行尾 inline 注释、换行）MUST 经 `spanBetween(valStop, sourceNextKey)` 收集，其中 `sourceNextKey` 为该 member 在**源码**中的下一项 key（或容器 close），MUST NOT 使用排序后下一项 key 作为区间终点；输出 MUST NOT 重复 emit 同一 member。`spanBetween` 收集的后缀 MUST NOT 包含下一源码 member 的 pure prefix `hiddenLeft(key)` token（含 comment 后 whitespace/newline；该 prefix MUST 仅随其所属 member emit）；MUST NOT 因排除 pure prefix 而移除上一 member 的行尾 inline 注释 token；MUST NOT 保留 pure prefix 之前的 inter-member layout gap whitespace（compact sort 路径 suffix 仅保留 value 同行后缀如 `, // inline`）。member 前缀注释与 key token 之间 MUST 保留换行（MUST NOT 输出 `// ..."key"` 粘连形态）。非末项 member 的行尾 inline 注释（源码形态 `value, // ...`）MUST 与 value 同行输出，且逗号 MUST 位于注释之前（`, // ...`）。当 `sortKeys: true` 与 `compact: true` 同时启用时，compact 布局规则（容器头注释与 `{`/`[` 同行、member 间无多余空行、无 whitespace-only 行）MUST 仍然适用；输出布局 MUST 与 `{ compact: true }` 相同，仅各 object 层 member 顺序按 sortKeys 重排；容器头注释（位于 `{`/`[` 与源码首个 member key 之间）MUST NOT 因 key 排序而附着到任意 member 的 prefix。
 
 #### Scenario: compact 容器头注释同行
 - **WHEN** format 输入 `{ // head\n  a: 1 }` 且 `compact: true`
@@ -93,28 +93,48 @@
 - **WHEN** format 输入 `{ b: 1,\n\n a: 2 }` 且 `{ compact: true, sortKeys: true }`
 - **THEN** 输出 MUST NOT 含连续两个换行符 `\n\n` 于同一 object 的 member 行之间
 
+#### Scenario: compact 与 sortKeys 无 whitespace-only 行
+- **WHEN** format 输入 `{ // a\n "a": 1, // inline\n\n // b\n "b": 2 }` 且 `{ compact: true, sortKeys: true }`
+- **THEN** 输出 MUST NOT 含仅由空白字符组成的行（whitespace-only lines）
+
+#### Scenario: compact 与 sortKeys member 前缀注释随 key
+- **WHEN** format 输入 `{ "_private": true,\n // 中文 key\n 中文字段: "v", "$key": "x" }` 且 `{ compact: true, sortKeys: true }`
+- **THEN** `// 中文 key` 出现在 `中文字段` member 之前，且 MUST NOT 出现在 `"$key"` member 之前
+
+#### Scenario: compact 与 sortKeys unicode 前缀注释随 key
+- **WHEN** format 输入 `{ "a": 1,\n // unicode\n "unicode": "\\u4F60\\u597D", "b": 2 }` 且 `{ compact: true, sortKeys: true }`
+- **THEN** `// unicode` 出现在 `"unicode"` member 之前，且 MUST NOT 出现在 `"a"` 或 `"b"` member 之前
+
+#### Scenario: compact 与 sortKeys prefix 注释与 key 分行
+- **WHEN** format 输入 `{ "$key": "value", // $\n\n  // 下划线\n  "_private": true, // private }` 且 `{ compact: true, sortKeys: true }`
+- **THEN** 输出含 `// 下划线` 与 `"_private"` 分行相邻，且 MUST NOT 含 `下划线"_private"` 粘连子串
+
+#### Scenario: compact 与 sortKeys section prefix 下行尾 inline 保留
+- **WHEN** format 输入 `{ // 数字\n "age": 18, // 年龄\n\n // 浮点数\n "score": 99.5, // 分数 }` 且 `{ compact: true, sortKeys: true }`
+- **THEN** 输出含 `"age": 18, // 年龄` 与 `"score": 99.5, // 分数`（各自与 value 同行），且 `// 浮点数` 行与 `"score"` 行之间 MUST NOT 有 whitespace-only 行
+
 ### Requirement: JSON5 三引号开引号行注释
 
-三引号字符串（`'''` 或 `"""`）**开引号 delimiter 同一行**上的 `//` 行注释与 `/* */` 块注释 MUST 作为词法 HIDDEN 处理，MUST NOT 计入字符串 BODY token，MUST NOT 出现在 `json5.parse` 结果中。`format` MUST 在开引号 delimiter 之后、BODY 之前还原这些注释。三引号 BODY 内（第二行及以后）的 `//`、`/* */` 仍为字符串字面量内容。
+三引号字符串（`'''` 或 `"""`）**开引号 delimiter 同一行**上的 `//` 行注释与 `/* */` 块注释 MUST 作为词法 HIDDEN 处理，MUST NOT 计入字符串 BODY token，MUST NOT 出现在 `JSON5.parse` 结果中。`format` MUST 在开引号 delimiter 之后、BODY 之前还原这些注释。三引号 BODY 内（第二行及以后）的 `//`、`/* */` 仍为字符串字面量内容。
 
 #### Scenario: 开引号行行注释不进 parse
 
-- **WHEN** `json5.parse` 输入 `{ "names": ''' // 三引号注释\n    ddsd\n  ''' }`
+- **WHEN** `JSON5.parse` 输入 `{ "names": ''' // 三引号注释\n    ddsd\n  ''' }`
 - **THEN** 返回值 `names` 为 `"    ddsd\n  "`（或等价正文），且字符串值中不含 `// 三引号注释`
 
 #### Scenario: 开引号行块注释不进 parse
 
-- **WHEN** `json5.parse` 输入 `{ x: ''' /* opener */\nbody\n''' }`
+- **WHEN** `JSON5.parse` 输入 `{ x: ''' /* opener */\nbody\n''' }`
 - **THEN** 返回值 `x` 不含 `/* opener */` 文本
 
 #### Scenario: BODY 内块注释仍为字符串
 
-- **WHEN** `json5.parse` 输入 `{ x: '''\n/* inside */\nbody\n''' }`
+- **WHEN** `JSON5.parse` 输入 `{ x: '''\n/* inside */\nbody\n''' }`
 - **THEN** 返回值 `x` 含 `/* inside */` 子串
 
 #### Scenario: format 还原开引号行行注释
 
-- **WHEN** `json5.format` 输入 `{ "names": ''' // 三引号注释\n    ddsd\n  ''' }`（compact 或 default）
+- **WHEN** `JSON5.format` 输入 `{ "names": ''' // 三引号注释\n    ddsd\n  ''' }`（compact 或 default）
 - **THEN** 输出在开引号 `'''` 之后、正文 `ddsd` 之前仍含 `// 三引号注释`
 
 ### Requirement: JSON5 三引号 delimiter 保留
@@ -123,12 +143,12 @@
 
 #### Scenario: pretty 保留单引号三引号
 
-- **WHEN** `json5.format` 输入含 `'''multi\nline'''` 且 `compact: false`
+- **WHEN** `JSON5.format` 输入含 `'''multi\nline'''` 且 `compact: false`
 - **THEN** 输出仍为 `'''...'''` 形态，而非 `"""..."""`
 
 #### Scenario: compact 保留单引号三引号
 
-- **WHEN** `json5.format` 输入含 `'''line'''` 且 `compact: true`
+- **WHEN** `JSON5.format` 输入含 `'''line'''` 且 `compact: true`
 - **THEN** 输出仍为 `'''...'''` 形态
 
 ### Requirement: JSON5 三引号必须成对闭合
@@ -137,17 +157,17 @@
 
 #### Scenario: 未闭合三引号报错
 
-- **WHEN** 对 `{ x: ''' unclosed }` 调用 `json5.validate`
+- **WHEN** 对 `{ x: ''' unclosed }` 调用 `JSON5.validate`
 - **THEN** 抛出 ParseError
 
 #### Scenario: 未闭合至 EOF 报错
 
-- **WHEN** 对 `{ x: ''' // c\nno close` 调用 `json5.validate`
+- **WHEN** 对 `{ x: ''' // c\nno close` 调用 `JSON5.validate`
 - **THEN** 抛出 ParseError
 
 #### Scenario: delimiter 类型不匹配报错
 
-- **WHEN** 对 `{ x: ''' start """ end }` 调用 `json5.validate`
+- **WHEN** 对 `{ x: ''' start """ end }` 调用 `JSON5.validate`
 - **THEN** 抛出 ParseError
 
 ### Requirement: JSON5 format 字符串 value 规范
@@ -199,7 +219,7 @@ format 输出 key MUST 保留 JSON5 合法形态：IdentifierName 无引号、NU
 
 ### Requirement: JSON5 format 注释保留与锚定
 
-format MUST 保留注释文本。注释 MUST 语义锚定：member 前/行尾注释随该 member 移动；容器头注释留在容器顶部；容器尾注释留在容器底部；文档级注释（根 value 之前与 EOF 之前）MUST 保留在格式化输出的对应位置。当 `sortKeys: true` 时，member 绑定的注释 MUST 随 member 一起重排。源码形态为 `value, // comment` 的行尾 inline 注释 MUST 锚定于该 value 所属 member，MUST NOT 因排序而附着到其它 key 的 `hiddenLeft`。
+format MUST 保留注释文本。注释 MUST 语义锚定：member 前/行尾注释随该 member 移动；容器头注释留在容器顶部；容器尾注释留在容器底部；文档级注释（根 value 之前与 EOF 之前）MUST 保留在格式化输出的对应位置。当 `sortKeys: true` 时，member 绑定的注释 MUST 随 member 一起重排。源码形态为 `value, // comment` 的行尾 inline 注释 MUST 锚定于该 value 所属 member，MUST NOT 因排序而附着到其它 key 的 `hiddenLeft`；当下一 member 存在 section prefix 注释时，上一 member 的行尾 inline MUST NOT 因 pure prefix 排除逻辑而丢失。member 前缀注释（独立行 `// ...` 或块注释位于 key 之前）MUST 锚定于该 key 所属 member；当 `sortKeys: true` 时 MUST NOT 因上一 member 的 suffix 收集而附着到其它 member；prefix 注释与 key 之间 MUST 保留换行（MUST NOT 与 key token 粘连输出）。
 
 #### Scenario: member 前注释保留
 - **WHEN** format 输入 `{ // comment\n a: 1 }`
@@ -212,6 +232,18 @@ format MUST 保留注释文本。注释 MUST 语义锚定：member 前/行尾注
 #### Scenario: sortKeys 时行尾 inline 注释随 value member 移动
 - **WHEN** format 输入 `{ "score": 99.5, "age": 18, // 年龄\n "hex": 0xFF }` 且 `sortKeys: true`
 - **THEN** `// 年龄` 出现在 `"age"` member 行，而非 `"score"` 或 `"hex"` member 行
+
+#### Scenario: sortKeys 时 member 前缀注释随 key 移动
+- **WHEN** format 输入 `{ "_private": true,\n // 中文 key\n 中文字段: "v", "$key": "x" }` 且 `sortKeys: true`
+- **THEN** `// 中文 key` 出现在 `中文字段` member 之前，而非 `"$key"` member 之前
+
+#### Scenario: sortKeys 时 prefix 注释与 key 分行
+- **WHEN** format 输入 `{ "$key": "v", // tag\n\n  // label\n  "a": 1 }` 且 `sortKeys: true`
+- **THEN** 输出含 `// label` 与 `"a"` 分行相邻，且 MUST NOT 含 `label"a"` 粘连子串
+
+#### Scenario: sortKeys 时 section 间隔下行尾 inline 不丢失
+- **WHEN** format 输入 `{ // 数字\n "age": 18, // 年龄\n\n // 浮点数\n "score": 99.5 }` 且 `{ sortKeys: true, compact: true }`
+- **THEN** 输出含 `"age": 18, // 年龄`
 
 #### Scenario: 文档首部注释保留
 - **WHEN** format 输入 `// header\n{ a: 1 }`

@@ -1,0 +1,6 @@
+{
+  "$key": "value", // $
+
+  // 下划线
+  "_private": true, // private
+}

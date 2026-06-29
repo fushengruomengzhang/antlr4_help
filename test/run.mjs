@@ -40,6 +40,17 @@ function normalizeFormatText(text) {
   return text.replace(/\n{2,}/g, '\n').replace(/\n?$/, '\n');
 }
 
+/** @param {string} text @param {string} [label] */
+function assertNoWhitespaceOnlyLines(text, label = 'output') {
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.length > 0 && line.trim() === '') {
+      throw new Error(`${label}: whitespace-only line at ${i + 1}: ${JSON.stringify(line)}`);
+    }
+  }
+}
+
 /**
  * @param {string} actual
  * @param {string} expected
@@ -200,6 +211,21 @@ runCase(
   'json5 format (sortKeys)',
   'test.json5.format.sorted.text',
   () => JSON5.format(json5Input, { sortKeys: true, compact: true }),
+  {
+    assert: (result) => {
+      const text = String(result);
+      if (!text.includes('"age": 18, // 年龄')) {
+        throw new Error('expected sorted+compact output to preserve "age": 18, // 年龄');
+      }
+      assertNoWhitespaceOnlyLines(text, 'json5 format (sortKeys)');
+      const compactText = JSON5.format(json5Input, { compact: true });
+      if (text.split('\n').length !== compactText.split('\n').length) {
+        throw new Error(
+          `expected sorted+compact line count to match compact (${compactText.split('\n').length})`,
+        );
+      }
+    },
+  },
 );
 
 runCase(
@@ -310,6 +336,21 @@ runCase(
 );
 
 runCase(
+  'json5 format sort compact gap (case)',
+  'cases.json5.sort-compact-gap.text',
+  () => JSON5.format(readCase('json5.sort-compact-gap.text'), { sortKeys: true, compact: true }),
+  {
+    assert: (result) => {
+      const text = String(result);
+      assertNoWhitespaceOnlyLines(text, 'json5.sort-compact-gap');
+      if (!text.includes('"a": 2, // inline a')) {
+        throw new Error('expected "a": 2, // inline a on one line with trailing inline comment');
+      }
+    },
+  },
+);
+
+runCase(
   'json5 format sort compact no blank (case)',
   'cases.json5.sort-compact-no-blank.text',
   () => JSON5.format(readCase('json5.sort-compact-no-blank.text'), { sortKeys: true, compact: true }),
@@ -375,6 +416,45 @@ runCase(
       const betweenBAndUnicode = text.slice(bKeyIdx, unicodeKeyIdx);
       if (!betweenBAndUnicode.includes('// unicode')) {
         throw new Error('expected // unicode between "b" and "unicode" members');
+      }
+    },
+  },
+);
+
+runCase(
+  'json5 format sort prefix newline (case)',
+  'cases.json5.sort-prefix-newline.text',
+  () => JSON5.format(readCase('json5.sort-prefix-newline.text'), { sortKeys: true, compact: true }),
+  {
+    assert: (result) => {
+      const text = String(result);
+      if (text.includes('下划线"_private"')) {
+        throw new Error('expected // 下划线 and "_private" on separate lines, not glued');
+      }
+      const commentIdx = text.indexOf('// 下划线');
+      const keyIdx = text.indexOf('"_private"');
+      if (commentIdx < 0 || keyIdx < 0) {
+        throw new Error('expected // 下划线 prefix and "_private" key to be preserved');
+      }
+      if (commentIdx > keyIdx) {
+        throw new Error('expected // 下划线 before "_private" key');
+      }
+    },
+  },
+);
+
+runCase(
+  'json5 format sort section inline (case)',
+  'cases.json5.sort-section-inline.text',
+  () => JSON5.format(readCase('json5.sort-section-inline.text'), { sortKeys: true, compact: true }),
+  {
+    assert: (result) => {
+      const text = String(result);
+      if (!text.includes('"age": 18, // 年龄')) {
+        throw new Error('expected "age": 18, // 年龄 with trailing inline on same line');
+      }
+      if (!text.includes('"score": 99.5, // 分数') && !text.includes('"score": 99.5 // 分数')) {
+        throw new Error('expected score member to preserve // 分数 comment');
       }
     },
   },

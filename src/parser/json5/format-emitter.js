@@ -124,8 +124,9 @@ export class FormatEmitter {
   /**
    * @param {import('antlr4').Token} fromTok
    * @param {import('antlr4').Token} toTok
+   * @param {Set<number>} [excludeTokenIndices]
    */
-  spanBetween(fromTok, toTok) {
+  spanBetween(fromTok, toTok, excludeTokenIndices) {
     if (!fromTok || !toTok || fromTok.tokenIndex == null || toTok.tokenIndex == null) {
       return '';
     }
@@ -134,6 +135,7 @@ export class FormatEmitter {
     for (let i = fromTok.tokenIndex + 1; i < toTok.tokenIndex; i++) {
       const t = this.tokens.tokens[i];
       if (!t || t.type === antlr4.Token.EOF) continue;
+      if (excludeTokenIndices?.has(t.tokenIndex)) continue;
       parts.push(t.text);
     }
     return parts.join('');
@@ -201,7 +203,14 @@ export class FormatEmitter {
   normalizeMemberSuffixCompact(suffix) {
     if (!suffix) return suffix;
     suffix = this.compactWhitespace(suffix);
-    return suffix.replace(/\n[ \t]*(?=\n)/g, '\n').replace(/\n{2,}/g, '\n');
+    suffix = suffix.replace(/\n[ \t]*(?=\n)/g, '\n').replace(/\n{2,}/g, '\n');
+    return this.trimInterMemberGapCompact(suffix);
+  }
+
+  /** @param {string} suffix */
+  trimInterMemberGapCompact(suffix) {
+    if (!suffix) return suffix;
+    return suffix.replace(/\n[ \t]*$/g, '');
   }
 
   /**
@@ -213,22 +222,99 @@ export class FormatEmitter {
    */
   hiddenLeftForSortedMember(keyTok, member, sourceMembers, openTok, emittedHiddenIndices) {
     let hidden = this.hiddenLeft(keyTok);
-
-    const sourceIdx = sourceMembers.indexOf(member);
-    if (sourceIdx > 0) {
-      const prevMember = sourceMembers[sourceIdx - 1];
-      const prevValStop = this.endToken(prevMember.value());
-      if (prevValStop?.tokenIndex != null && keyTok.tokenIndex != null) {
-        const fromIdx = prevValStop.tokenIndex + 1;
-        const toIdx = keyTok.tokenIndex;
-        hidden = hidden.filter((t) => t.tokenIndex < fromIdx || t.tokenIndex >= toIdx);
-      }
-    }
-
     if (emittedHiddenIndices) {
       hidden = hidden.filter((t) => !emittedHiddenIndices.has(t.tokenIndex));
     }
+    const sourceIdx = sourceMembers.indexOf(member);
+    if (sourceIdx > 0) {
+      const prevValStop = this.endToken(sourceMembers[sourceIdx - 1].value());
+      let firstPurePrefixIdx = hidden.length;
+      for (let i = 0; i < hidden.length; i++) {
+        const t = hidden[i];
+        if (
+          (t.text.includes('//') || t.text.includes('/*')) &&
+          this.isNextMemberPurePrefix(prevValStop, keyTok, t)
+        ) {
+          firstPurePrefixIdx = i;
+          break;
+        }
+      }
+      if (firstPurePrefixIdx < hidden.length) {
+        hidden = hidden.slice(firstPurePrefixIdx).filter((t) => {
+          if (!t.text.includes('//') && !t.text.includes('/*')) {
+            return true;
+          }
+          return this.isNextMemberPurePrefix(prevValStop, keyTok, t);
+        });
+      } else {
+        hidden = [];
+      }
+    }
     return hidden;
+  }
+
+  /**
+   * @param {import('antlr4').Token} valStop
+   * @param {import('antlr4').Token} nextKeyTok
+   * @param {import('antlr4').Token} commentToken
+   */
+  isNextMemberPurePrefix(valStop, nextKeyTok, commentToken) {
+    const span = this.spanBetween(valStop, nextKeyTok);
+    const commentText = commentToken.text;
+    const idx = span.indexOf(commentText);
+    if (idx < 0) return false;
+    const beforeComment = span.slice(0, idx);
+    const lastComma = beforeComment.lastIndexOf(',');
+    if (lastComma < 0) return true;
+    return /\n/.test(beforeComment.slice(lastComma + 1));
+  }
+
+  /**
+   * Tokens in hiddenLeft(nextKey) that belong to next member's pure prefix block
+   * (from first pure-prefix comment through end). Preceding tokens may hold prev
+   * member trailing inline and MUST NOT be excluded from suffix.
+   *
+   * @param {import('antlr4').Token} valStop
+   * @param {import('antlr4').Token} nextKeyTok
+   * @param {import('antlr4').Token[]} hiddenLeftTokens
+   */
+  purePrefixHiddenTokens(valStop, nextKeyTok, hiddenLeftTokens) {
+    let firstPurePrefixIdx = hiddenLeftTokens.length;
+    for (let i = 0; i < hiddenLeftTokens.length; i++) {
+      const t = hiddenLeftTokens[i];
+      if (
+        (t.text.includes('//') || t.text.includes('/*')) &&
+        this.isNextMemberPurePrefix(valStop, nextKeyTok, t)
+      ) {
+        firstPurePrefixIdx = i;
+        break;
+      }
+    }
+    if (firstPurePrefixIdx >= hiddenLeftTokens.length) {
+      return [];
+    }
+    return hiddenLeftTokens.slice(firstPurePrefixIdx);
+  }
+
+  /**
+   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} sourceMembers
+   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext} member
+   * @param {import('antlr4').Token} valStop
+   * @param {import('antlr4').Token} sourceNextKey
+   */
+  excludedNextMemberPrefixIndices(sourceMembers, member, valStop, sourceNextKey) {
+    const sourceIdx = sourceMembers.indexOf(member);
+    if (sourceIdx < 0 || sourceIdx >= sourceMembers.length - 1) {
+      return undefined;
+    }
+    const nextMember = sourceMembers[sourceIdx + 1];
+    if (nextMember.key().start !== sourceNextKey) {
+      return undefined;
+    }
+    const hiddenLeft = this.hiddenLeft(sourceNextKey);
+    const purePrefix = this.purePrefixHiddenTokens(valStop, sourceNextKey, hiddenLeft);
+    if (purePrefix.length === 0) return undefined;
+    return new Set(purePrefix.map((t) => t.tokenIndex));
   }
 
   /**
@@ -241,7 +327,13 @@ export class FormatEmitter {
    */
   memberSuffixForSortedMember(valStop, member, sourceMembers, closeTok, isLastInOutput, compact = false) {
     const sourceNextKey = this.sourceNextKeyToken(sourceMembers, member, closeTok);
-    let suffix = this.spanBetween(valStop, sourceNextKey);
+    const excludeIndices = this.excludedNextMemberPrefixIndices(
+      sourceMembers,
+      member,
+      valStop,
+      sourceNextKey,
+    );
+    let suffix = this.spanBetween(valStop, sourceNextKey, excludeIndices);
     if (compact) {
       suffix = this.normalizeMemberSuffixCompact(suffix);
     }

@@ -72,6 +72,7 @@ API.snowflakeId();                              // ApiSchema 节点 id
 - **默认**（`compact: false`）：结构换行清晰；单行字符串 value 统一为 `"..."`；三引号多行保留为 `"""..."""`（`'''` 转为 `"""`）
 - **compact**（`compact: true`）：紧凑布局（行尾注释同行、少空行）；保留源字符串 token 形态（单引号/`'''`/行续接）
 - 注释保留并锚定在 member 上；`sortKeys: true` 时注释随 member 移动
+- `sortKeys: true` 与 `compact: true` 同时启用时，布局与 `compact: true` 一致（仅各 object 层 key 顺序不同），无 whitespace-only 空行
 - key 保留 JSON5 形态（标识符/数字/关键字/引号串）
 
 ## 说明

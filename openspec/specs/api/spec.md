@@ -1,52 +1,52 @@
 # api Specification
 
 ## Purpose
-定义 Model → ApiSchema 转换产品线：随机唯一节点 id（`api.snowflakeId`）与 Java8 源文件 → ApiSchema 字段树（`api.java8ToApiSchema`）。实现位于 `src/parser/api/`，依赖 `java8.signatures` 解析层，不包含 ANTLR grammar 变更。
+定义 Model → ApiSchema 转换产品线：随机唯一节点 id（`API.snowflakeId`）与 Java8 源文件 → ApiSchema 字段树（`API.java8ToApiSchema`）。实现位于 `src/parser/api/`，依赖 `JAVA8.signatures` 解析层，不包含 ANTLR grammar 变更。
 
 ## Requirements
 
 ### Requirement: api 命名空间导出
 
-`src/index.js` SHALL 导出 `api` 命名空间对象，至少含 `snowflakeId` 与 `java8ToApiSchema` 两个函数。MUST NOT 在 `java8` 命名空间或顶层 export 中再提供等价函数。
+`src/index.js` SHALL 导出 `API` 命名空间对象（非小写 `api`），至少含 `snowflakeId` 与 `java8ToApiSchema` 两个函数。MUST NOT 在 `JAVA8` 命名空间或顶层 export 中再提供等价函数。
 
-#### Scenario: api 命名空间可导入
+#### Scenario: API 命名空间可导入
 
-- **WHEN** 在 ESM 模块中 `import { api } from './src/index.js'`
-- **THEN** `api.snowflakeId` 与 `api.java8ToApiSchema` 均为函数
+- **WHEN** 在 ESM 模块中 `import { API } from './src/index.js'`
+- **THEN** `API.snowflakeId` 与 `API.java8ToApiSchema` 均为函数
 
-### Requirement: api.snowflakeId 随机唯一标识
+### Requirement: API.snowflakeId 随机唯一标识
 
-项目 SHALL 通过 `api.snowflakeId(): string` 提供随机唯一 id。每次调用 MUST 返回新的非空字符串，且在单次进程内已生成的 id MUST 互不重复。实现 MUST NOT 使用 Twitter Snowflake 64 位位布局；MAY 使用 `crypto.randomUUID()` 或等价随机源。实现 MUST 位于 `src/parser/api/snowflake-id.js`。
+项目 SHALL 通过 `API.snowflakeId(): string` 提供随机唯一 id。每次调用 MUST 返回新的非空字符串，且在单次进程内已生成的 id MUST 互不重复。实现 MUST NOT 使用 Twitter Snowflake 64 位位布局；MAY 使用 `crypto.randomUUID()` 或等价随机源。实现 MUST 位于 `src/parser/api/snowflake-id.js`。
 
 #### Scenario: 连续调用产生不同 id
 
-- **WHEN** 连续两次调用 `api.snowflakeId()`
+- **WHEN** 连续两次调用 `API.snowflakeId()`
 - **THEN** 两次返回值均为非空字符串且互不相等
 
-### Requirement: api.java8ToApiSchema 多文件输入
+### Requirement: API.java8ToApiSchema 多文件输入
 
-项目 SHALL 提供 `api.java8ToApiSchema(inputs: string | string[], options?: { rootClass?: string }): ApiSchemaNode[]`。`inputs` 为单个 Java 源字符串或字符串数组；对每个字符串 MUST 调用 `java8.signatures()` 得到 `FileModel`，并将所有文件的顶层 `types[]` 合并为 class 索引（按类型简单名 `name` 映射到 `TypeModel`）。若多文件存在同名顶层类，后出现的文件 MUST 覆盖先出现的定义。
+项目 SHALL 提供 `API.java8ToApiSchema(inputs: string | string[], options?: { rootClass?: string }): ApiSchemaNode[]`。`inputs` 为单个 Java 源字符串或字符串数组；对每个字符串 MUST 调用 `JAVA8.signatures()` 得到 `FileModel`，并将所有文件的顶层 `types[]` 合并为 class 索引（按类型简单名 `name` 映射到 `TypeModel`）。若多文件存在同名顶层类，后出现的文件 MUST 覆盖先出现的定义。
 
-`options.rootClass` 可选；省略时 MUST 对 `Array.isArray(inputs) ? inputs[0] : inputs` 调用 `java8.firstClassName` 作为根类名。若根类名在 class 索引中不存在，MUST 抛出 `Error`（或 ParseError）并说明找不到根类。
+`options.rootClass` 可选；省略时 MUST 对 `Array.isArray(inputs) ? inputs[0] : inputs` 调用 `JAVA8.firstClassName` 作为根类名。若根类名在 class 索引中不存在，MUST 抛出 `Error`（或 ParseError）并说明找不到根类。
 
 #### Scenario: 单文件默认根类
 
-- **WHEN** `api.java8ToApiSchema(test.java.text)` 且文件首个顶层类为 `User`
+- **WHEN** `API.java8ToApiSchema(test.java.text)` 且文件首个顶层类为 `User`
 - **THEN** 返回 `User` 类字段展开后的 ApiSchemaNode 数组
 
 #### Scenario: 指定根类
 
-- **WHEN** `api.java8ToApiSchema(inputs, { rootClass: 'UserDetail' })`
+- **WHEN** `API.java8ToApiSchema(inputs, { rootClass: 'UserDetail' })`
 - **THEN** 返回以 `UserDetail` 为根展开的 ApiSchemaNode 数组
 
 #### Scenario: 多文件合并索引
 
-- **WHEN** `api.java8ToApiSchema([user.java, tbUser.java])` 且 `tbUser.java` 定义顶层类 `TbUser`
+- **WHEN** `API.java8ToApiSchema([user.java, tbUser.java])` 且 `tbUser.java` 定义顶层类 `TbUser`
 - **THEN** class 索引含两个文件的全部顶层类型，且引用 `TbUser` 的字段可展开其字段
 
-### Requirement: api.java8ToApiSchema 仅展开字段
+### Requirement: API.java8ToApiSchema 仅展开字段
 
-`api.java8ToApiSchema` MUST 仅遍历根类 `ownMembers` 中 `kind === 'field'` 的成员（含 static 字段）。MUST NOT 包含 method、constructor 或其他成员种类。字段顺序 MUST 与 `ownMembers` 中 field 出现顺序一致。
+`API.java8ToApiSchema` MUST 仅遍历根类 `ownMembers` 中 `kind === 'field'` 的成员（含 static 字段）。MUST NOT 包含 method、constructor 或其他成员种类。字段顺序 MUST 与 `ownMembers` 中 field 出现顺序一致。
 
 #### Scenario: 方法不出现在 API Schema
 
@@ -58,9 +58,9 @@
 - **WHEN** 根类含 `private static final String uuid`
 - **THEN** 输出数组含 `key: 'uuid'` 的节点
 
-### Requirement: api.java8ToApiSchema baseTypeMap
+### Requirement: API.java8ToApiSchema baseTypeMap
 
-`api.java8ToApiSchema` MUST 使用以下基础类型映射（类简单名或 primitive 名 → API type 字符串）：
+`API.java8ToApiSchema` MUST 使用以下基础类型映射（类简单名或 primitive 名 → API type 字符串）：
 
 `String→String`、`Boolean→Boolean`、`LocalDateTime→String`、`MultipartFile→File`、`int→Number`、`Integer→Number`、`Long→Number`、`Double→Number`、`Float→Number`。
 
@@ -76,7 +76,7 @@
 - **WHEN** 字段类型为 `TbUser` 且 class 索引中无 `TbUser`
 - **THEN** 节点 `type` 为 `'Object'`，无 `children`
 
-### Requirement: api.java8ToApiSchema List 与 Map 展开
+### Requirement: API.java8ToApiSchema List 与 Map 展开
 
 - `List<T>` MUST 映射为 `type: 'List'`，且 MUST 含唯一子节点：`index: 0`，`key` 省略，对 `T` 递归展开
 - `Map<K,V>` MUST 映射为 `type: 'Object'`，且 MUST 含唯一子节点：`index: 0`，对 `V`（value 类型）递归展开；MUST 忽略 key 类型 `K`
@@ -92,7 +92,7 @@
 - **WHEN** 字段类型为 `Map<String, UserDetail>`
 - **THEN** 节点 `type` 为 `'Object'`，`children[0]` 展开 `UserDetail` 字段结构
 
-### Requirement: api.java8ToApiSchema 注解 desc 与 check
+### Requirement: API.java8ToApiSchema 注解 desc 与 check
 
 每个字段节点 MUST 设置 `check` 为 `@ApiModelProperty.required === true`，否则为 `false`。`desc` MUST 优先取字段 `annotations.ApiModelProperty.value`；若缺失且类型为 object（或 List/Map 内层 object），MAY 取目标类 `annotations.ApiModel.value`。
 
@@ -106,9 +106,9 @@
 - **WHEN** 字段含 `@ApiModelProperty("年龄")` 且无 `required`
 - **THEN** 节点 `check` 为 `false` 且 `desc` 为 `'年龄'`
 
-### Requirement: api.java8ToApiSchema 继承 field 合并
+### Requirement: API.java8ToApiSchema 继承 field 合并
 
-展开 class object 类型时，`api.java8ToApiSchema` MUST 使用 **effectiveFields** 而非仅 `ownMembers`。effectiveFields MUST 沿 `extendsType` 链向上收集各层 `kind === 'field'` 成员；合并时 **子类 field 同名覆盖父类**。输出 field 顺序 MUST 为：从祖先到子孙逐层 emit，每个 field 名仅出现一次（最终生效的为子类声明）。若某层 `extendsType` 指向 classMap 中不存在的类型，MUST 在该处终止继承链。
+展开 class object 类型时，`API.java8ToApiSchema` MUST 使用 **effectiveFields** 而非仅 `ownMembers`。effectiveFields MUST 沿 `extendsType` 链向上收集各层 `kind === 'field'` 成员；合并时 **子类 field 同名覆盖父类**。输出 field 顺序 MUST 为：从祖先到子孙逐层 emit，每个 field 名仅出现一次（最终生效的为子类声明）。若某层 `extendsType` 指向 classMap 中不存在的类型，MUST 在该处终止继承链。
 
 #### Scenario: 子类含父类字段
 
@@ -125,7 +125,7 @@
 - **WHEN** `Child extends External` 且 classMap 无 `External`
 - **THEN** 展开 `Child` 仅含 `Child.ownMembers` 中的 field
 
-### Requirement: api.java8ToApiSchema 循环引用检测
+### Requirement: API.java8ToApiSchema 循环引用检测
 
 展开 object 类型时 MUST 维护 path 栈（已展开的类型简单名列表）。当 `typeName` **尚未**在 path 中时，MUST 将 `typeName` 追加到 path，并使用 **effectiveFields** 递归展开全部 field（见继承 field 合并 requirement）。当 `typeName` **已在** path 中（回边）时，MUST 仍创建当前 Object 节点，且 MUST 展开 effectiveFields，但 MUST **排除** 字段类型 object 核（含 `List`/`Map` 内层递归）等于 **fromType** 的 field——其中 `fromType` 为进入当前 field 递归前所在 object 的类型名。排除后若无剩余 field，MAY 不设置 `children`。MUST NOT 使用固定 maxDepth 截断。List/Map 包装层 MUST NOT 将 wrapper 追加到 path；进入 List/Map 内层 object 时 MUST 传递与进入该 List/Map 字段前相同的 `fromType`。
 
@@ -144,9 +144,9 @@
 - **WHEN** 展开路径 `A → B` 且 `B` 含 `A a` 与 `String nameB`
 - **THEN** `B` 节点 children 含 `a` 与 `nameB`
 
-### Requirement: api.java8ToApiSchema 节点结构
+### Requirement: API.java8ToApiSchema 节点结构
 
-每个 ApiSchemaNode MUST 含 `id`（`api.snowflakeId()` 字符串）、`parentId`（根层为 number `0`，子层为父节点 id 字符串）、`type`、`check`。字段节点 MUST 含 `key`（字段名）。List/Map 元素模板节点 MUST 含 `index: 0` 且 MUST 省略 `key`。可选字段：`desc`、`children`。
+每个 ApiSchemaNode MUST 含 `id`（`API.snowflakeId()` 字符串）、`parentId`（根层为 number `0`，子层为父节点 id 字符串）、`type`、`check`。字段节点 MUST 含 `key`（字段名）。List/Map 元素模板节点 MUST 含 `index: 0` 且 MUST 省略 `key`。可选字段：`desc`、`children`。
 
 #### Scenario: 根节点 parentId
 
@@ -158,7 +158,7 @@
 - **WHEN** 字段含嵌套 children
 - **THEN** 每个子节点 `parentId` 等于其直接父节点的 `id` 字符串
 
-### Requirement: api.java8ToApiSchema 不索引 nestedTypes
+### Requirement: API.java8ToApiSchema 不索引 nestedTypes
 
 class 索引 MUST 仅由 `FileModel.types[]`（compilationUnit 顶层类型）构建。`TypeModel.nestedTypes` MUST NOT 加入索引。
 
