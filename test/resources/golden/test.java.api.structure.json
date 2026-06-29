@@ -90,6 +90,23 @@
                 "check": false,
                 "key": "user",
                 "desc": "用户基础信息"
+              },
+              {
+                "type": "Object",
+                "check": false,
+                "key": "userP",
+                "children": [
+                  {
+                    "type": "String",
+                    "check": false,
+                    "key": "id"
+                  },
+                  {
+                    "type": "String",
+                    "check": false,
+                    "key": "nameBack"
+                  }
+                ]
               }
             ]
           },
@@ -110,6 +127,23 @@
                     "check": false,
                     "key": "user",
                     "desc": "用户基础信息"
+                  },
+                  {
+                    "type": "Object",
+                    "check": false,
+                    "key": "userP",
+                    "children": [
+                      {
+                        "type": "String",
+                        "check": false,
+                        "key": "id"
+                      },
+                      {
+                        "type": "String",
+                        "check": false,
+                        "key": "nameBack"
+                      }
+                    ]
                   }
                 ]
               }
@@ -132,6 +166,23 @@
                     "check": false,
                     "key": "user",
                     "desc": "用户基础信息"
+                  },
+                  {
+                    "type": "Object",
+                    "check": false,
+                    "key": "userP",
+                    "children": [
+                      {
+                        "type": "String",
+                        "check": false,
+                        "key": "id"
+                      },
+                      {
+                        "type": "String",
+                        "check": false,
+                        "key": "nameBack"
+                      }
+                    ]
                   }
                 ]
               }
@@ -159,6 +210,23 @@
                         "check": false,
                         "key": "user",
                         "desc": "用户基础信息"
+                      },
+                      {
+                        "type": "Object",
+                        "check": false,
+                        "key": "userP",
+                        "children": [
+                          {
+                            "type": "String",
+                            "check": false,
+                            "key": "id"
+                          },
+                          {
+                            "type": "String",
+                            "check": false,
+                            "key": "nameBack"
+                          }
+                        ]
                       }
                     ]
                   }
@@ -188,6 +256,23 @@
                         "check": false,
                         "key": "user",
                         "desc": "用户基础信息"
+                      },
+                      {
+                        "type": "Object",
+                        "check": false,
+                        "key": "userP",
+                        "children": [
+                          {
+                            "type": "String",
+                            "check": false,
+                            "key": "id"
+                          },
+                          {
+                            "type": "String",
+                            "check": false,
+                            "key": "nameBack"
+                          }
+                        ]
                       }
                     ]
                   }
@@ -222,6 +307,23 @@
                             "check": false,
                             "key": "user",
                             "desc": "用户基础信息"
+                          },
+                          {
+                            "type": "Object",
+                            "check": false,
+                            "key": "userP",
+                            "children": [
+                              {
+                                "type": "String",
+                                "check": false,
+                                "key": "id"
+                              },
+                              {
+                                "type": "String",
+                                "check": false,
+                                "key": "nameBack"
+                              }
+                            ]
                           }
                         ]
                       }
@@ -251,6 +353,23 @@
         "check": false,
         "key": "user",
         "desc": "用户基础信息"
+      },
+      {
+        "type": "Object",
+        "check": false,
+        "key": "userP",
+        "children": [
+          {
+            "type": "String",
+            "check": false,
+            "key": "id"
+          },
+          {
+            "type": "String",
+            "check": false,
+            "key": "nameBack"
+          }
+        ]
       }
     ]
   },
@@ -271,6 +390,23 @@
             "check": false,
             "key": "user",
             "desc": "用户基础信息"
+          },
+          {
+            "type": "Object",
+            "check": false,
+            "key": "userP",
+            "children": [
+              {
+                "type": "String",
+                "check": false,
+                "key": "id"
+              },
+              {
+                "type": "String",
+                "check": false,
+                "key": "nameBack"
+              }
+            ]
           }
         ]
       }
@@ -293,6 +429,23 @@
             "check": false,
             "key": "user",
             "desc": "用户基础信息"
+          },
+          {
+            "type": "Object",
+            "check": false,
+            "key": "userP",
+            "children": [
+              {
+                "type": "String",
+                "check": false,
+                "key": "id"
+              },
+              {
+                "type": "String",
+                "check": false,
+                "key": "nameBack"
+              }
+            ]
           }
         ]
       }
@@ -320,6 +473,23 @@
                 "check": false,
                 "key": "user",
                 "desc": "用户基础信息"
+              },
+              {
+                "type": "Object",
+                "check": false,
+                "key": "userP",
+                "children": [
+                  {
+                    "type": "String",
+                    "check": false,
+                    "key": "id"
+                  },
+                  {
+                    "type": "String",
+                    "check": false,
+                    "key": "nameBack"
+                  }
+                ]
               }
             ]
           }
@@ -349,6 +519,23 @@
                 "check": false,
                 "key": "user",
                 "desc": "用户基础信息"
+              },
+              {
+                "type": "Object",
+                "check": false,
+                "key": "userP",
+                "children": [
+                  {
+                    "type": "String",
+                    "check": false,
+                    "key": "id"
+                  },
+                  {
+                    "type": "String",
+                    "check": false,
+                    "key": "nameBack"
+                  }
+                ]
               }
             ]
           }
@@ -383,6 +570,23 @@
                     "check": false,
                     "key": "user",
                     "desc": "用户基础信息"
+                  },
+                  {
+                    "type": "Object",
+                    "check": false,
+                    "key": "userP",
+                    "children": [
+                      {
+                        "type": "String",
+                        "check": false,
+                        "key": "id"
+                      },
+                      {
+                        "type": "String",
+                        "check": false,
+                        "key": "nameBack"
+                      }
+                    ]
                   }
                 ]
               }
