@@ -1,7 +1,7 @@
 {
   "name": "antlr4_help",
   "version": "1.0.0",
-  "description": "ANTLR 4.9.3 学习/参考项目 (Node + ESM)",
+  "description": "ANTLR 4.9.3 统一解析库：json5 / json / java8 API (Node + ESM)",
   "type": "module",
   "main": "src/index.js",
   "scripts": {

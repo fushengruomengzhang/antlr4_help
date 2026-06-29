@@ -1,6 +1,6 @@
 # antlr4_help
 
-基于 **ANTLR 4.9.3** 的学习/参考项目，运行环境为 **Node.js (ESM)**。
+基于 **ANTLR 4.9.3** 的学习/参考项目，运行环境为 **Node.js (ESM)**。提供 json5、json、java8 三套语法的统一解析 API。
 
 > antlr4 使用版本 4.9.3
 
@@ -8,49 +8,66 @@
 
 ```
 antlr4_help/
-├── package.json            # Node 项目 ("type": "module")，依赖 antlr4@4.9.3
-├── lib/                    # 非 npm 依赖：ANTLR 生成工具 jar（需 Java 运行）
-│   └── antlr-4.9.3-complete.jar
-├── scripts/
-│   └── generate.sh         # 调用 jar 生成 JavaScript 解析器
+├── package.json
+├── lib/antlr-4.9.3-complete.jar    # 构建期：ANTLR 生成工具（需 Java）
+├── scripts/generate.sh             # 生成解析器
 └── src/
-    ├── grammars/           # *.g4 语法源文件
-    │   └── Hello.g4
-    ├── parser/             # 由语法生成的解析器（已纳入版本控制）
-    └── index.js            # ESM 入口：驱动解析
+    ├── core/                       # ParsePipeline、ParseError
+    ├── grammars/{json5,json,java8}/  # *.g4 语法源
+    ├── parser/{json5,json,java8}/    # 生成的 Lexer/Parser（已入库）
+    ├── json5/                      # validate、parse、format
+    ├── json/                       # parse
+    ├── java8/                      # firstClassName、signatures
+    └── index.js                    # 统一导出
 ```
-
-依赖分两类：构建期的 **ANTLR 工具 jar**（在 `lib/`，需 Java）负责“生成”解析器；运行期的 **`antlr4` npm 运行时**负责“执行”解析器。
 
 ## 环境要求
 
 - Node.js（ESM）+ npm
-- Java（仅在重新生成解析器时需要，运行已生成代码不需要）
+- Java（仅在 `npm run generate` 时需要）
 
 ## 使用
 
 ```bash
-# 1. 安装运行时依赖
 npm install
-
-# 2. （可选）修改 src/grammars/*.g4 后重新生成解析器，并提交 src/parser/
-npm run generate
-
-# 3. 运行示例（默认输入 "hello world"，也可自定义）
-npm start
-node src/index.js "hello antlr"
+npm start                    # 运行 API 演示
+node src/index.js
+npm run generate             # 修改 .g4 后重新生成
 ```
 
-示例输出：
+## API
 
+```javascript
+import { json5, json, java8, ParseError } from './src/index.js';
+
+// JSON5
+json5.validate('{ a: 1, }');           // void | ParseError
+json5.parse('{ a: 1, }');              // → object
+json5.format('{ a: 1, }', {
+  indent: { type: 'space', size: 2 },  // 或 { type: 'tab' }
+  sortKeys: false,
+});
+
+// JSON（100% ANTLR）
+json.parse('{"a":1}');
+
+// Java8（完整文件）
+java8.firstClassName('public class Foo { }');  // → "Foo"
+java8.signatures(javaSource);                   // → FileModel
 ```
-输入: "hello world"
-解析树: (greeting hello world <EOF>)
-问候对象: world
-解析成功 ✅
-```
+
+### ParseError
+
+语法/词法错误统一抛出 `ParseError`，字段：`language`、`line`（1-based）、`column`（0-based）、`message`。
+
+### JSON5 format 规则
+
+- 缩进/换行可配置；去掉尾逗号
+- 单行字符串 value 统一为 `"..."`；三引号多行保留为 `"""..."""`（`'''` 转为 `"""`）
+- 注释保留并锚定在 member 上；`sortKeys: true` 时注释随 member 移动
+- key 保留 JSON5 形态（标识符/数字/关键字/引号串）
 
 ## 说明
 
-- `src/parser/` 下的生成代码已提交进仓库，clone 后无需安装 Java 即可直接运行。
-- 修改语法后请运行 `npm run generate` 重新生成并提交 `src/parser/`，避免与语法不同步。
+- 修改语法后请 `npm run generate` 并提交 `src/parser/`。
+- `json5.parse` 不保留注释；需保留注释请用 `json5.format`。

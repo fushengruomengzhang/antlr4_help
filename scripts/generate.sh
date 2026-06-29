@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 用 lib/ 下的 ANTLR 工具 jar 从 src/grammars/*.g4 生成 JavaScript 解析器到 src/parser/
+# 用 lib/ 下的 ANTLR 工具 jar 从 src/grammars/<lang>/ 生成 JavaScript 解析器到 src/parser/<lang>/
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -12,6 +12,16 @@ if [ ! -f "$JAR" ]; then
   exit 1
 fi
 
-mkdir -p "$OUT_DIR"
-java -jar "$JAR" -Dlanguage=JavaScript -o "$OUT_DIR" "$GRAMMAR_DIR"/*.g4
-echo "已生成解析器到 $OUT_DIR"
+for lang in json5 json java8; do
+  src="$GRAMMAR_DIR/$lang"
+  dest="$OUT_DIR/$lang"
+  if [ ! -d "$src" ]; then
+    echo "跳过: 未找到语法目录 $src" >&2
+    continue
+  fi
+  mkdir -p "$dest"
+  echo "生成 $lang → $dest"
+  java -jar "$JAR" -Dlanguage=JavaScript -o "$dest" "$src"/*.g4
+done
+
+echo "已生成解析器到 $OUT_DIR/{json5,json,java8}/"
