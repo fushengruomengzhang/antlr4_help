@@ -1,0 +1,59 @@
+package com.zhangfusheng.cn.model;
+    import io.swagger.annotations.ApiModelProperty;
+
+    @Data
+    @ApiModel("用户信息")
+    public class User{
+
+      private static final String uuid="123";
+
+      @ApiModelProperty(value = "用户名 支持模糊查询",required = true)
+      private String name;
+
+      @ESDocument
+      @IgnoreDocument
+      @ApiModelProperty("年龄")
+      private int age;
+
+      @ApiModelProperty("孩子们")
+      private List<User> child;
+
+      private UserDetail userDetail;
+
+      private List<UserDetail> userDetails;
+
+      private Map<String,UserDetail> userDetailGroupByName;
+
+      private Map<String,List<UserDetail>> mlus;
+
+      private List<Map<String,UserDetail>> lmus;
+
+      private List<Map<String,List<UserDetail>>> lmlus;
+
+      public String getName(){
+        return this.name;
+      }
+
+      private LocalDateTime createTime;
+
+      @Skip(c=true)
+      public int getAge(){
+        return this.age;
+      }
+
+      @Skip(c=true)
+      public void setH(@H(p="dd") int a,int b,int c){
+
+      }
+
+      public class User2{
+        private int i;
+      }
+    }
+
+    @Data
+    @ApiModel("用户详情")
+    public class UserDetail {
+      @ApiModelProperty("用户基础信息")
+      private TbUser user;
+    }

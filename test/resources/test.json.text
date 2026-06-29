@@ -1,0 +1,30 @@
+{
+  "name": "张三",
+  "age": 18,
+  "score": 99.5,
+  "exp": 123000,
+  "enable": true,
+  "deleted": false,
+  "remark": null,
+  "emptyObject": {},
+  "emptyArray": [],
+  "user": {
+    "id": "1001",
+    "username": "admin",
+    "profile": {
+      "nickname": "管理员",
+      "address": {
+        "city": "北京",
+        "zip": "100000"
+      }
+    }
+  },
+  "tags": ["java", "js", "antlr"],
+  "numbers": [1, 2, 3],
+  "unicode": "你好",
+  "escape": "line1\nline2\tline3",
+  "$key": "value",
+  "_private": true,
+  "中文字段": "中文值",
+  "tail": "end"
+}
