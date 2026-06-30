@@ -51,7 +51,7 @@
 
 ### Requirement: JSON5 format compact 模式
 
-当 `compact: true` 时，format SHALL 在保留注释锚定规则（与默认模式相同）的前提下输出紧凑布局：容器头注释与 `{`/`[` 同行（若存在）；member 行尾注释与 value 同行；SHALL NOT 在 member 之间插入多余空行。字符串 value（STRING、TRIPLE_DOUBLE_STRING、TRIPLE_SINGLE_STRING）SHALL 保留输入 token 原文形态（含单引号、`'''`、行续接反斜杠），SHALL NOT 应用「JSON5 format 字符串 value 规范」中的引号转换。尾逗号移除、key 形态保留、`indent` 与 `sortKeys` 规则仍适用。当 `sortKeys: true` 与 `compact: true` 同时启用时，member 前缀注释 MUST 经注释锚点索引的 member prefix 槽位锚定；member 后缀（逗号、行尾 inline 注释、换行）MUST 经索引的 member suffix 槽位收集，suffix 区间 MUST 以该 member 在**源码**中的下一项 key（或容器 close）为边界，MUST NOT 使用排序后下一项 key 作为区间终点；输出 MUST NOT 重复 emit 同一 member。索引收集的后缀 MUST NOT 包含下一源码 member 的 pure prefix trivia（含 comment 后 whitespace/newline；该 prefix MUST 仅随其所属 member emit）；MUST NOT 因排除 pure prefix 而移除上一 member 的行尾 inline 注释 token；MUST NOT 保留 pure prefix 之前的 inter-member layout gap whitespace（compact sort 路径 suffix 仅保留 value 同行后缀如 `, // inline`）。member 前缀注释与 key token 之间 MUST 保留换行（MUST NOT 输出 `// ..."key"` 粘连形态）。非末项 member 的行尾 inline 注释（源码形态 `value, // ...`）MUST 与 value 同行输出，且逗号 MUST 位于注释之前（`, // ...`）。当 `sortKeys: true` 与 `compact: true` 同时启用时，compact 布局规则（容器头注释与 `{`/`[` 同行、member 间无多余空行、无 whitespace-only 行）MUST 仍然适用；输出布局 MUST 与 `{ compact: true }` 相同，仅各 object 层 member 顺序按 sortKeys 重排；容器头注释（位于 `{`/`[` 与源码首个 member key 之间）MUST NOT 因 key 排序而附着到任意 member 的 prefix。
+当 `compact: true` 时，format SHALL 在保留注释锚定规则（与默认模式相同）的前提下输出紧凑布局：容器头注释与 `{`/`[` 同行（若存在）；member 行尾注释与 value 同行；SHALL NOT 在 member 之间插入多余空行。字符串 value（STRING、TRIPLE_DOUBLE_STRING、TRIPLE_SINGLE_STRING）SHALL 保留输入 token 原文形态（含单引号、`'''`、行续接反斜杠），SHALL NOT 应用「JSON5 format 字符串 value 规范」中的引号转换。尾逗号移除、key 形态保留、`indent` 与 `sortKeys` 规则仍适用。当 `sortKeys: true` 与 `compact: true` 同时启用时，member 前缀注释 MUST 经 `hiddenLeft(key)` 锚定；member 后缀（逗号、行尾 inline 注释、换行）MUST 经 `spanBetween(valStop, sourceNextKey)` 收集，其中 `sourceNextKey` 为该 member 在**源码**中的下一项 key（或容器 close），MUST NOT 使用排序后下一项 key 作为区间终点；输出 MUST NOT 重复 emit 同一 member。`spanBetween` 收集的后缀 MUST NOT 包含下一源码 member 的 pure prefix `hiddenLeft(key)` token（含 comment 后 whitespace/newline；该 prefix MUST 仅随其所属 member emit）；MUST NOT 因排除 pure prefix 而移除上一 member 的行尾 inline 注释 token；MUST NOT 保留 pure prefix 之前的 inter-member layout gap whitespace（compact sort 路径 suffix 仅保留 value 同行后缀如 `, // inline`）。member 前缀注释与 key token 之间 MUST 保留换行（MUST NOT 输出 `// ..."key"` 粘连形态）。非末项 member 的行尾 inline 注释（源码形态 `value, // ...`）MUST 与 value 同行输出，且逗号 MUST 位于注释之前（`, // ...`）。当 `sortKeys: true` 与 `compact: true` 同时启用时，compact 布局规则（容器头注释与 `{`/`[` 同行、member 间无多余空行、无 whitespace-only 行）MUST 仍然适用；输出布局 MUST 与 `{ compact: true }` 相同，仅各 object 层 member 顺序按 sortKeys 重排；容器头注释（位于 `{`/`[` 与源码首个 member key 之间）MUST NOT 因 key 排序而附着到任意 member 的 prefix。
 
 #### Scenario: compact 容器头注释同行
 - **WHEN** format 输入 `{ // head\n  a: 1 }` 且 `compact: true`
@@ -112,20 +112,6 @@
 #### Scenario: compact 与 sortKeys section prefix 下行尾 inline 保留
 - **WHEN** format 输入 `{ // 数字\n "age": 18, // 年龄\n\n // 浮点数\n "score": 99.5, // 分数 }` 且 `{ compact: true, sortKeys: true }`
 - **THEN** 输出含 `"age": 18, // 年龄` 与 `"score": 99.5, // 分数`（各自与 value 同行），且 `// 浮点数` 行与 `"score"` 行之间 MUST NOT 有 whitespace-only 行
-
-### Requirement: JSON5 format 使用 Parse grammar 与锚点索引
-
-`JSON5.format` SHALL 使用 `Json5Lexer` 与 `Json5Parser`（entry rule `json5`）解析输入，SHALL 在 emit 前构建或使用注释锚点索引（见 `json5-comment-anchor-index`），SHALL NOT 依赖独立的 Format grammar（`Json5FormatLexer`/`Json5FormatParser`）作为实现路径。
-
-#### Scenario: format.js 引用 Parse parser
-
-- **WHEN** 查看 `src/parser/json5/format.js`
-- **THEN** 其 Lexer/Parser import 来自 `src/grammars/json5/Json5Lexer.js` 与 `Json5Parser.js`，且不存在对 `src/grammars/json5/format/` 的 import
-
-#### Scenario: 存在 comment-anchor-index 模块
-
-- **WHEN** 查看 `src/parser/json5/`
-- **THEN** 存在 `comment-anchor-index.js`（或等价模块）且 `format-emitter.js` 在 sort 路径引用其输出
 
 ### Requirement: JSON5 三引号开引号行注释
 
