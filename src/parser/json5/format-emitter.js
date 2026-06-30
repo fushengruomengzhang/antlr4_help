@@ -1,4 +1,5 @@
 import antlr4 from 'antlr4';
+import { TextBuf } from '../core/text-buf.js';
 import {
   decodeJson5String,
   encodeDoubleQuotedString,
@@ -41,49 +42,6 @@ export function normalizeFormatOptions(options) {
     sortKeys: options?.sortKeys ?? false,
     compact: options?.compact ?? false,
   };
-}
-
-/** compact 容器 formatter 用的分块字符串缓冲，减少深层 += 分配。 */
-class TextBuf {
-  constructor() {
-    /** @type {string[]} */
-    this.parts = [];
-  }
-
-  /** @param {...string} chunks */
-  push(...chunks) {
-    for (const c of chunks) {
-      if (c) this.parts.push(c);
-    }
-  }
-
-  toString() {
-    return this.parts.join('');
-  }
-
-  /**
-   * 新 member 行前去掉行尾空白，补换行与 member 缩进。
-   * @param {(memberDepth: number) => string} indentAtMemberDepth
-   * @param {number} depth 当前容器 depth
-   */
-  beginMemberLine(indentAtMemberDepth, depth) {
-    let line = this.parts.join('');
-    line = line.replace(/\n[ \t]+$/, '\n');
-    if (!line.endsWith('\n')) line += '\n';
-    this.parts = [line + indentAtMemberDepth(depth + 1)];
-  }
-
-  /**
-   * 闭合括号行前补容器级缩进。
-   * @param {(closeDepth: number) => string} indentAtCloseDepth
-   * @param {number} depth
-   */
-  beginCloseLine(indentAtCloseDepth, depth) {
-    let line = this.parts.join('');
-    line = line.replace(/\n[ \t]+$/, '\n');
-    if (!line.endsWith('\n')) line += '\n';
-    this.parts = [line + indentAtCloseDepth(depth)];
-  }
 }
 
 export class FormatEmitter {
@@ -460,17 +418,18 @@ export class FormatEmitter {
   /** 格式化整份 JSON5 文档（根 value + 文档头尾注释）。 */
   formatDocument(root) {
     const valueCtx = root.value();
-    let out = this.emitHidden(this.hiddenLeft(valueCtx.start));
+    const buf = new TextBuf();
+    let prefix = this.emitHidden(this.hiddenLeft(valueCtx.start));
     if (this.options.compact) {
-      out = this.compactWhitespace(out);
+      prefix = this.compactWhitespace(prefix);
     }
-    out += this.formatValue(valueCtx, 0);
+    buf.push(prefix, this.formatValue(valueCtx, 0));
     let footer = this.emitHidden(this.hiddenRight(this.endToken(valueCtx)));
     if (this.options.compact) {
       footer = this.compactWhitespace(footer);
     }
-    out += footer;
-    return out.trimEnd();
+    buf.push(footer);
+    return buf.toString().trimEnd();
   }
 
   /** 按 value 类型分派 object / array /  primitive。 */
@@ -515,21 +474,23 @@ export class FormatEmitter {
   /** 输出单引号三引号字符串（含 opener 注释）。 */
   emitTripleSingleString(ctx) {
     const openTok = ctx.TRIPLE_S_OPEN().symbol;
-    let out = openTok.text;
-    out += this.emitHidden(this.hiddenRight(openTok));
-    out += tripleStringBodyText(ctx);
-    out += ctx.TRIPLE_S_CLOSE().symbol.text;
-    return out;
+    const buf = new TextBuf();
+    buf.push(openTok.text);
+    buf.push(this.emitHidden(this.hiddenRight(openTok)));
+    buf.push(tripleStringBodyText(ctx));
+    buf.push(ctx.TRIPLE_S_CLOSE().symbol.text);
+    return buf.toString();
   }
 
   /** 输出双引号三引号字符串（含 opener 注释）。 */
   emitTripleDoubleString(ctx) {
     const openTok = ctx.TRIPLE_D_OPEN().symbol;
-    let out = openTok.text;
-    out += this.emitHidden(this.hiddenRight(openTok));
-    out += tripleStringBodyText(ctx);
-    out += ctx.TRIPLE_D_CLOSE().symbol.text;
-    return out;
+    const buf = new TextBuf();
+    buf.push(openTok.text);
+    buf.push(this.emitHidden(this.hiddenRight(openTok)));
+    buf.push(tripleStringBodyText(ctx));
+    buf.push(ctx.TRIPLE_D_CLOSE().symbol.text);
+    return buf.toString();
   }
 
   /** 输出 key token 原文形态。 */

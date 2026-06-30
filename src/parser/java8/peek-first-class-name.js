@@ -2,7 +2,7 @@ import antlr4 from 'antlr4';
 import Java8Lexer from '../../grammars/java8/Java8Lexer.js';
 import Java8Parser from '../../grammars/java8/Java8Parser.js';
 import Java8ParserListener from '../../grammars/java8/Java8ParserListener.js';
-import { ParseError } from '../core/parse-error.js';
+import { CollectingErrorListener, throwIfErrors } from '../core/error-listener.js';
 import { extractFirstClassName } from './signature-visitor.js';
 
 /** @extends {Error} */
@@ -12,29 +12,6 @@ class PeekFirstClassNameComplete extends Error {
     super('peekFirstClassName complete');
     this.name = name;
   }
-}
-
-/** 收集词法/语法错误，供 pipeline 统一抛出 ParseError。 */
-class CollectingErrorListener extends antlr4.error.ErrorListener {
-  constructor() {
-    super();
-    /** @type {{ line: number, column: number, message: string }[]} */
-    this.errors = [];
-  }
-
-  syntaxError(_recognizer, _offendingSymbol, line, column, msg) {
-    this.errors.push({ line, column, message: msg });
-  }
-}
-
-/**
- * @param {ParseLanguage} language
- * @param {CollectingErrorListener} listener
- */
-function throwIfErrors(language, listener) {
-  if (listener.errors.length === 0) return;
-  const { line, column, message } = listener.errors[0];
-  throw new ParseError({ language, line, column, message });
 }
 
 /** @param {import('antlr4').ParserRuleContext} ctx */

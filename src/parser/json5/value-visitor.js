@@ -1,4 +1,5 @@
 import { decodeJsonString, encodeJsonString } from '../json/string-utils.js';
+import { visitArrayChildren } from '../core/visit-helpers.js';
 
 /** @param {string} bodyText triple-quoted string body (no delimiters) */
 export function decodeTripleBody(bodyText) {
@@ -109,5 +110,5 @@ function visitObject(ctx) {
 /** @param {import('../../grammars/json5/Json5Parser.js').default.ArrayContext} ctx */
 function visitArray(ctx) {
   const values = ctx.value ? ctx.value() : [];
-  return values.map(visitValue);
+  return visitArrayChildren(values, visitValue);
 }

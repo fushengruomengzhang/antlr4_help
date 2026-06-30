@@ -1,6 +1,5 @@
 import { snowflakeId } from '../snowflake-id.js';
 import { effectiveFields, fieldReferencesType, fieldReferencesTypeInPath } from './effective-fields.js';
-import { firstClassName } from '../../java8/first-class-name.js';
 import { signatures } from '../../java8/signatures.js';
 import { typeSignatureToParsed } from './type-to-parsed.js';
 
@@ -165,7 +164,7 @@ export function java8ToApiSchema(inputs, options = {}) {
 
   let rootName = options.rootClass;
   if (!rootName) {
-    rootName = firstClassName(codes[0]) ?? undefined;
+    rootName = fileModels[0]?.types[0]?.name ?? undefined;
   }
   if (!rootName) {
     throw new Error('java8ToApiSchema: cannot determine root class name');

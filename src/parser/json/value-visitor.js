@@ -1,4 +1,5 @@
 import { decodeJsonString } from './string-utils.js';
+import { visitArrayChildren } from '../core/visit-helpers.js';
 
 /**
  * @param {import('../../grammars/json/JSONParser.js').default.ValueContext} ctx
@@ -41,5 +42,5 @@ function visitObj(ctx) {
  */
 function visitArr(ctx) {
   const values = ctx.value ? ctx.value() : [];
-  return values.map(visitValue);
+  return visitArrayChildren(values, visitValue);
 }

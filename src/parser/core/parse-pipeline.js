@@ -1,30 +1,8 @@
 import antlr4 from 'antlr4';
 import { ParseError } from './parse-error.js';
+import { CollectingErrorListener, throwIfErrors } from './error-listener.js';
 
-/** 收集词法/语法错误，供 pipeline 统一抛出 ParseError。 */
-class CollectingErrorListener extends antlr4.error.ErrorListener {
-  constructor() {
-    super();
-    /** @type {{ line: number, column: number, message: string }[]} */
-    this.errors = [];
-  }
-
-  /** ANTLR 回调：记录一条 syntaxError。 */
-  syntaxError(_recognizer, _offendingSymbol, line, column, msg) {
-    this.errors.push({ line, column, message: msg });
-  }
-}
-
-/**
- * 若 listener 有错误则抛出 ParseError（取第一条）。
- * @param {ParseLanguage} language
- * @param {CollectingErrorListener} listener
- */
-function throwIfErrors(language, listener) {
-  if (listener.errors.length === 0) return;
-  const { line, column, message } = listener.errors[0];
-  throw new ParseError({ language, line, column, message });
-}
+const { PredictionMode } = antlr4.atn;
 
 /**
  * @typedef {object} ParsePipelineOptions
@@ -37,7 +15,26 @@ function throwIfErrors(language, listener) {
  */
 
 /**
+ * SLL 预测失败时 reset 后以 LL 重试一次。
+ * @param {import('antlr4').Parser} parser
+ * @param {import('antlr4').CommonTokenStream} tokenStream
+ * @param {() => import('antlr4').ParserRuleContext} entryFn
+ */
+function parseWithPrediction(parser, tokenStream, entryFn) {
+  parser._interp.predictionMode = PredictionMode.SLL;
+  try {
+    return entryFn();
+  } catch {
+    tokenStream.seek(0);
+    parser.reset();
+    parser._interp.predictionMode = PredictionMode.LL;
+    return entryFn();
+  }
+}
+
+/**
  * 统一 ANTLR 解析管线：InputStream → Lexer → TokenStream → Parser → entry rule。
+ * 先尝试 SLL 预测，失败则 reset 后以 LL 重试。
  * @param {ParsePipelineOptions} options
  * @returns {{ tree: import('antlr4').ParserRuleContext, tokenStream: import('antlr4').CommonTokenStream, parser: import('antlr4').Parser }}
  */
@@ -62,7 +59,8 @@ export function runParsePipeline({ language, input, Lexer, Parser, entryRule, fi
   if (typeof entry !== 'function') {
     throw new Error(`Parser has no entry rule "${entryRule}"`);
   }
-  const tree = entry.call(parser);
+
+  const tree = parseWithPrediction(parser, tokenStream, () => entry.call(parser));
 
   throwIfErrors(language, lexerListener);
   throwIfErrors(language, parserListener);
