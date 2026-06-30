@@ -142,6 +142,43 @@ export class FormatEmitter {
   }
 
   /**
+   * 将 `{`/`[` 后 opening hidden 拆为同行 inline 与含换行的 layout。
+   * @param {import('antlr4').Token[]} hiddenTokens
+   */
+  splitOpeningHidden(hiddenTokens) {
+    /** @type {import('antlr4').Token[]} */
+    const inlineHidden = [];
+    let hasLayoutHidden = false;
+    for (const t of hiddenTokens) {
+      if (/\n/.test(t.text)) {
+        hasLayoutHidden = true;
+      } else {
+        inlineHidden.push(t);
+      }
+    }
+    return { inlineHidden, hasLayoutHidden };
+  }
+
+  /**
+   * compact 空 object/array：保留 inline 头注释，闭合缩进用 indentUnit(depth) 而非源码 layout whitespace。
+   * @param {import('antlr4').Token} openTok
+   * @param {string} openChar
+   * @param {string} closeChar
+   * @param {number} depth
+   * @param {TextBuf} buf
+   * @param {(d: number) => string} indentMember
+   */
+  emitCompactEmptyContainer(openTok, openChar, closeChar, depth, buf, indentMember) {
+    const { inlineHidden, hasLayoutHidden } = this.splitOpeningHidden(this.hiddenRight(openTok));
+    buf.push(openChar);
+    buf.push(this.emitHiddenCompact(inlineHidden));
+    if (hasLayoutHidden) {
+      buf.beginCloseLine(indentMember, depth);
+    }
+    buf.push(closeChar);
+  }
+
+  /**
    * 收集两 token 之间（不含端点）的文本；可排除指定 token index。
    * sort 路径 suffix 收集时 exclude 下一 member 的 pure prefix。
    * @param {import('antlr4').Token} fromTok
@@ -550,12 +587,12 @@ export class FormatEmitter {
       const buf = new TextBuf();
       const openingHidden = this.hiddenRight(openTok);
 
-      buf.push('{');
-
       if (members.length === 0) {
-        buf.push(this.emitHiddenCompact(openingHidden), '}');
+        this.emitCompactEmptyContainer(openTok, '{', '}', depth, buf, (d) => this.indentUnit(d));
         return buf.toString();
       }
+
+      buf.push('{');
 
       buf.push(this.emitHiddenCompact(openingHidden));
       if (emittedHiddenIndices) {
@@ -638,12 +675,12 @@ export class FormatEmitter {
     const openingHidden = this.hiddenRight(openTok);
     const indentMember = (d) => this.indentUnit(d);
 
-    buf.push('[');
-
     if (values.length === 0) {
-      buf.push(this.emitHiddenCompact(openingHidden), ']');
+      this.emitCompactEmptyContainer(openTok, '[', ']', depth, buf, indentMember);
       return buf.toString();
     }
+
+    buf.push('[');
 
     buf.push(this.emitHiddenCompact(openingHidden));
 

@@ -390,6 +390,33 @@ runCase(
 );
 
 runCase(
+  'json5 format compact empty object indent (case)',
+  'cases.json5.compact-empty-object-indent.text',
+  () =>
+    JSON5.format(readCase('json5.compact-empty-object-indent.text'), {
+      compact: true,
+      indent: { type: 'space', size: 4 },
+    }),
+  {
+    golden: 'json5.compact-empty-object-indent.text',
+    assert: (result) => {
+      const lines = String(result).split('\n');
+      const userIdx = lines.findIndex((l) => l.includes('"user": { // 用户基础信息'));
+      if (userIdx < 0) {
+        throw new Error('expected "user" empty object member line');
+      }
+      const userIndent = lines[userIdx].match(/^ */)?.[0].length ?? -1;
+      const closeIndent = lines[userIdx + 1]?.match(/^ */)?.[0].length ?? -1;
+      if (userIndent !== closeIndent) {
+        throw new Error(
+          `empty object close indent mismatch: user line ${userIndent}, close line ${closeIndent}`,
+        );
+      }
+    },
+  },
+);
+
+runCase(
   'json5 format sort prefix comment (case)',
   'cases.json5.sort-prefix-comment.text',
   () => JSON5.format(readCase('json5.sort-prefix-comment.text'), { sortKeys: true, compact: true }),
