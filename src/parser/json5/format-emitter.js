@@ -90,10 +90,12 @@ export class FormatEmitter {
   /**
    * @param {import('antlr4').CommonTokenStream} tokenStream
    * @param {FormatOptions} [options]
+   * @param {import('./comment-anchor-index.js').CommentAnchorIndex} [anchorIndex]
    */
-  constructor(tokenStream, options) {
+  constructor(tokenStream, options, anchorIndex) {
     this.tokens = tokenStream;
     this.options = normalizeFormatOptions(options);
+    this.anchorIndex = anchorIndex ?? null;
     /** @type {Map<number, string>} */
     this._indentCache = new Map();
     this._tokensFilled = false;
@@ -322,100 +324,12 @@ export class FormatEmitter {
     emittedHiddenIndices,
     memberIdxMap,
   ) {
-    let hidden = this.hiddenLeft(keyTok);
+    const anchor = this.anchorIndex?.memberAnchors.get(member);
+    let hidden = anchor ? [...anchor.prefixSorted] : this.hiddenLeft(keyTok);
     if (emittedHiddenIndices) {
       hidden = hidden.filter((t) => !emittedHiddenIndices.has(t.tokenIndex));
     }
-    const sourceIdx = memberIdxMap.get(member);
-    if (sourceIdx != null && sourceIdx > 0) {
-      const prevValStop = this.endToken(sourceMembers[sourceIdx - 1].value());
-      let firstPurePrefixIdx = hidden.length;
-      for (let i = 0; i < hidden.length; i++) {
-        const t = hidden[i];
-        if (
-          (t.text.includes('//') || t.text.includes('/*')) &&
-          this.isNextMemberPurePrefix(prevValStop, keyTok, t)
-        ) {
-          firstPurePrefixIdx = i;
-          break;
-        }
-      }
-      if (firstPurePrefixIdx < hidden.length) {
-        hidden = hidden.slice(firstPurePrefixIdx).filter((t) => {
-          if (!t.text.includes('//') && !t.text.includes('/*')) {
-            return true;
-          }
-          return this.isNextMemberPurePrefix(prevValStop, keyTok, t);
-        });
-      } else {
-        hidden = [];
-      }
-    }
     return hidden;
-  }
-
-  /**
-   * 判断 comment 是否为下一 member 的 section prefix（非上一 member 行尾 inline）。
-   * @param {import('antlr4').Token} valStop
-   * @param {import('antlr4').Token} nextKeyTok
-   * @param {import('antlr4').Token} commentToken
-   */
-  isNextMemberPurePrefix(valStop, nextKeyTok, commentToken) {
-    const span = this.spanBetween(valStop, nextKeyTok);
-    const commentText = commentToken.text;
-    const idx = span.indexOf(commentText);
-    if (idx < 0) return false;
-    const beforeComment = span.slice(0, idx);
-    const lastComma = beforeComment.lastIndexOf(',');
-    if (lastComma < 0) return true;
-    return /\n/.test(beforeComment.slice(lastComma + 1));
-  }
-
-  /**
-   * hiddenLeft 中属于下一 member pure prefix 块的 token（从首个 pure prefix 注释起）。
-   * @param {import('antlr4').Token} valStop
-   * @param {import('antlr4').Token} nextKeyTok
-   * @param {import('antlr4').Token[]} hiddenLeftTokens
-   */
-  purePrefixHiddenTokens(valStop, nextKeyTok, hiddenLeftTokens) {
-    let firstPurePrefixIdx = hiddenLeftTokens.length;
-    for (let i = 0; i < hiddenLeftTokens.length; i++) {
-      const t = hiddenLeftTokens[i];
-      if (
-        (t.text.includes('//') || t.text.includes('/*')) &&
-        this.isNextMemberPurePrefix(valStop, nextKeyTok, t)
-      ) {
-        firstPurePrefixIdx = i;
-        break;
-      }
-    }
-    if (firstPurePrefixIdx >= hiddenLeftTokens.length) {
-      return [];
-    }
-    return hiddenLeftTokens.slice(firstPurePrefixIdx);
-  }
-
-  /**
-   * suffix 收集时需排除的下一 member pure prefix token index 集合。
-   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} sourceMembers
-   * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext} member
-   * @param {import('antlr4').Token} valStop
-   * @param {import('antlr4').Token} sourceNextKey
-   * @param {Map<import('../../grammars/json5/Json5Parser.js').default.MemberContext, number>} memberIdxMap
-   */
-  excludedNextMemberPrefixIndices(sourceMembers, member, valStop, sourceNextKey, memberIdxMap) {
-    const sourceIdx = memberIdxMap.get(member);
-    if (sourceIdx == null || sourceIdx < 0 || sourceIdx >= sourceMembers.length - 1) {
-      return undefined;
-    }
-    const nextMember = sourceMembers[sourceIdx + 1];
-    if (nextMember.key().start !== sourceNextKey) {
-      return undefined;
-    }
-    const hiddenLeft = this.hiddenLeft(sourceNextKey);
-    const purePrefix = this.purePrefixHiddenTokens(valStop, sourceNextKey, hiddenLeft);
-    if (purePrefix.length === 0) return undefined;
-    return new Set(purePrefix.map((t) => t.tokenIndex));
   }
 
   /**
@@ -437,15 +351,13 @@ export class FormatEmitter {
     compact,
     memberIdxMap,
   ) {
-    const sourceNextKey = this.sourceNextKeyToken(sourceMembers, member, closeTok, memberIdxMap);
-    const excludeIndices = this.excludedNextMemberPrefixIndices(
-      sourceMembers,
-      member,
-      valStop,
-      sourceNextKey,
-      memberIdxMap,
-    );
-    let suffix = this.spanBetween(valStop, sourceNextKey, excludeIndices);
+    const anchor = this.anchorIndex?.memberAnchors.get(member);
+    let suffix = anchor
+      ? anchor.suffixEntries.map((e) => e.text).join('')
+      : this.spanBetween(
+          valStop,
+          this.sourceNextKeyToken(sourceMembers, member, closeTok, memberIdxMap),
+        );
     if (compact) {
       suffix = this.normalizeMemberSuffixCompact(suffix);
     }
@@ -460,12 +372,15 @@ export class FormatEmitter {
   /** 格式化整份 JSON5 文档（根 value + 文档头尾注释）。 */
   formatDocument(root) {
     const valueCtx = root.value();
-    let out = this.emitHidden(this.hiddenLeft(valueCtx.start));
+    const docBefore = this.anchorIndex?.doc.before ?? this.hiddenLeft(valueCtx.start);
+    let out = this.emitHidden(docBefore);
     if (this.options.compact) {
       out = this.compactWhitespace(out);
     }
     out += this.formatValue(valueCtx, 0);
-    let footer = this.emitHidden(this.hiddenRight(this.endToken(valueCtx)));
+    let footer = this.emitHidden(
+      this.anchorIndex?.doc.after ?? this.hiddenRight(this.endToken(valueCtx)),
+    );
     if (this.options.compact) {
       footer = this.compactWhitespace(footer);
     }
@@ -584,7 +499,8 @@ export class FormatEmitter {
       const memberIdxMap = useSortAnchors ? this.buildMemberIndexMap(sourceMembers) : null;
       const emittedHiddenIndices = useSortAnchors ? new Set() : null;
       const buf = new TextBuf();
-      const openingHidden = this.hiddenRight(openTok);
+      const objAnchor = this.anchorIndex?.objects.get(ctx);
+      const openingHidden = objAnchor?.openAfter ?? this.hiddenRight(openTok);
 
       buf.push('{');
 
@@ -713,11 +629,13 @@ export class FormatEmitter {
       const buf = new TextBuf();
       const useSortAnchors = this.options.sortKeys;
       const memberIdxMap = useSortAnchors ? this.buildMemberIndexMap(sourceMembers) : null;
+      const objAnchor = this.anchorIndex?.objects.get(ctx);
+      const openingHidden = objAnchor?.openAfter ?? this.hiddenRight(openTok);
 
       buf.push('{');
 
       if (members.length === 0) {
-        buf.push(this.emitHidden(this.hiddenRight(openTok)), '}');
+        buf.push(this.emitHidden(openingHidden), '}');
         return buf.toString();
       }
 

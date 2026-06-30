@@ -1,6 +1,7 @@
 import Json5Lexer from '../../grammars/json5/Json5Lexer.js';
 import Json5Parser from '../../grammars/json5/Json5Parser.js';
 import { runParsePipeline } from '../core/parse-pipeline.js';
+import { buildCommentAnchorIndex } from './comment-anchor-index.js';
 import { FormatEmitter } from './format-emitter.js';
 
 /**
@@ -17,7 +18,8 @@ export function format(input, options) {
     entryRule: 'json5',
     fillTokens: true,
   });
-  const emitter = new FormatEmitter(tokenStream, options);
+  const anchorIndex = buildCommentAnchorIndex(tree, tokenStream);
+  const emitter = new FormatEmitter(tokenStream, options, anchorIndex);
   return emitter.formatDocument(tree);
 }
 
