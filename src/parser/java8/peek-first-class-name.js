@@ -2,7 +2,7 @@ import antlr4 from 'antlr4';
 import Java8Lexer from '../../grammars/java8/Java8Lexer.js';
 import Java8Parser from '../../grammars/java8/Java8Parser.js';
 import Java8ParserListener from '../../grammars/java8/Java8ParserListener.js';
-import { CollectingErrorListener, throwIfErrors } from '../core/error-listener.js';
+import { CollectingErrorListener, throwIfErrors } from '../core/parse-pipeline.js';
 import { extractFirstClassName } from './signature-visitor.js';
 
 /** @extends {Error} */

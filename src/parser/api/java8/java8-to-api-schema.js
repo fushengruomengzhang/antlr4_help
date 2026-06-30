@@ -1,7 +1,24 @@
-import { snowflakeId } from '../snowflake-id.js';
+import { randomUUID } from 'node:crypto';
 import { effectiveFields, fieldReferencesType, fieldReferencesTypeInPath } from './effective-fields.js';
-import { signatures } from '../../java8/signatures.js';
+import { signatures } from '../../java8/signature-visitor.js';
 import { typeSignatureToParsed } from './type-to-parsed.js';
+
+/** @type {Set<string>} */
+const seen = new Set();
+
+/**
+ * @returns {string}
+ */
+export function snowflakeId() {
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const id = randomUUID();
+    if (!seen.has(id)) {
+      seen.add(id);
+      return id;
+    }
+  }
+  throw new Error('snowflakeId: failed to generate unique id');
+}
 
 /**
  * @typedef {object} ApiSchemaNode

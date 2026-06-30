@@ -49,9 +49,8 @@
  * @module java8
  */
 
-import { firstClassName } from './first-class-name.js';
+import { firstClassName, signatures } from './signature-visitor.js';
 import { peekFirstClassName } from './peek-first-class-name.js';
-import { signatures } from './signatures.js';
 
 /**
  * Java8 源文件解析产品线：首个类名与结构化签名树。

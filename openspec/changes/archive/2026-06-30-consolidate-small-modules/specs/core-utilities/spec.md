@@ -1,21 +1,4 @@
-# core-utilities Specification
-
-## Purpose
-定义 `src/parser/core/` 下共享性能与字符串工具模块的职责与消费约定，供 JSON4、JSON5、Java8 解析路径复用。
-
-## Requirements
-
-### Requirement: TextBuf 分块字符串缓冲
-
-项目 SHALL 在 `src/parser/core/text-buf.js` 提供 `TextBuf` 类，供运行时模块进行分块字符串拼接；SHALL 支持 `push(...chunks)`、`toString()`，以及 format 路径所需的 `beginMemberLine(indentFn, depth)` 与 `beginCloseLine(indentFn, depth)`。`format-emitter.js` MUST import 共享 `TextBuf`，MUST NOT 在模块内私有定义重复实现。
-
-#### Scenario: format-emitter 使用共享 TextBuf
-- **WHEN** 查看 `src/parser/json5/format-emitter.js`
-- **THEN** 自 `src/parser/core/text-buf.js` import `TextBuf`，且文件内不存在私有 `class TextBuf`
-
-#### Scenario: TextBuf 基本拼接
-- **WHEN** 对 `TextBuf` 实例依次 `push('a', 'b')` 后调用 `toString()`
-- **THEN** 返回 `'ab'`
+## MODIFIED Requirements
 
 ### Requirement: 共享 JSON 字符串解码与编码
 

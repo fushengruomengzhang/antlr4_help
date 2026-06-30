@@ -21,7 +21,7 @@
 
 ### Requirement: 源码与生成代码目录布局
 
-项目 SHALL 将源码集中于 `src/`：`.g4` 语法源文件与 ANTLR 生成解析器（Lexer/Parser）位于 `src/grammars/`（按语言分子目录）；运行时 API 位于 `src/parser/` 下按语言或能力分子目录（如 `src/parser/json5/` 含 `index.js`（public barrel）、validate/parse/format，`src/parser/json/` 含 `index.js` 与 parse，`src/parser/java8/` 含 `index.js` 与 signatures 等解析 API，`src/parser/api/` 含 `index.js` 与 Model → ApiSchema 转换 API、`src/parser/api/java8/` 含 `java8-to-api-schema.js`、`effective-fields.js`、`type-to-parsed.js` 等模块且 `type-to-parsed.js` MUST 内联 baseTypeMap、MUST NOT 存在独立的 `base-type-map.js`）；共享管线与性能工具位于 `src/parser/core/`（含 `parse-pipeline.js`、`parse-error.js`（实现或 re-export）、`text-buf.js`、`string-decode.js`、`visit-helpers.js`、`error-listener.js`），且 `core/` MUST NOT 提供对外 public barrel（无 `core/index.js`）；公开异常类型 `ParseError` 位于 `src/parser/parse-error.js`；统一入口 `src/index.js` 仅 re-export 各产品线 public barrel，MUST NOT 直接从 `parser/core/` 或各包深层实现文件 import 组装命名空间。
+项目 SHALL 将源码集中于 `src/`：`.g4` 语法源文件与 ANTLR 生成解析器（Lexer/Parser）位于 `src/grammars/`（按语言分子目录）；运行时 API 位于 `src/parser/` 下按语言或能力分子目录（如 `src/parser/json5/` 含 `index.js`（public barrel）、`value-visitor.js`（validate/parse/visit）、`format-emitter.js`（format + emitter），`src/parser/json/` 含 `index.js` 与 `value-visitor.js`（parse/visit），`src/parser/java8/` 含 `index.js`、`signature-visitor.js`（firstClassName/signatures/extract）、`peek-first-class-name.js` 等，`src/parser/api/` 含 `index.js`（含 snowflakeId）与 `java8/` 转换模块）；共享管线与性能工具位于 `src/parser/core/`（含 `parse-pipeline.js`（含 error listener 与 visitArrayChildren）、`text-buf.js`、`string-decode.js`），且 `core/` MUST NOT 提供对外 public barrel；公开异常类型 `ParseError` 位于 `src/parser/parse-error.js`（含实现）；统一入口 `src/index.js` 仅 re-export 各产品线 public barrel。
 
 #### Scenario: 语法源文件按语言分目录
 - **WHEN** 查看 `src/grammars/`
@@ -39,13 +39,17 @@
 - **WHEN** 查看 `src/parser/json5/`、`json/`、`java8/`、`api/`
 - **THEN** 各目录存在 `index.js` 作为对外统一 export 入口
 
+#### Scenario: 无一行 re-export 占位文件
+- **WHEN** 查看 `src/parser/json/`
+- **THEN** 不存在 `string-utils.js`；不存在仅含单函数 pipeline wrapper 的 `parse.js`
+
 #### Scenario: core 无 public barrel
 - **WHEN** 查看 `src/parser/core/`
 - **THEN** 不存在 `index.js`
 
-#### Scenario: core 共享性能工具模块存在
+#### Scenario: core 共享模块存在
 - **WHEN** 查看 `src/parser/core/`
-- **THEN** 存在 `text-buf.js`、`string-decode.js`、`visit-helpers.js`、`error-listener.js`
+- **THEN** 存在 `parse-pipeline.js`、`text-buf.js`、`string-decode.js`；不存在独立的 `parse-error.js`、`error-listener.js`、`visit-helpers.js`
 
 #### Scenario: api/java8 baseTypeMap 内联于 type-to-parsed
 - **WHEN** 查看 `src/parser/api/java8/`

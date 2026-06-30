@@ -21,7 +21,7 @@
 
 ### Requirement: API.snowflakeId 随机唯一标识
 
-项目 SHALL 通过 `API.snowflakeId(): string` 提供随机唯一 id。每次调用 MUST 返回新的非空字符串，且在单次进程内已生成的 id MUST 互不重复。实现 MUST NOT 使用 Twitter Snowflake 64 位位布局；MAY 使用 `crypto.randomUUID()` 或等价随机源。实现 MUST 位于 `src/parser/api/snowflake-id.js`。
+项目 SHALL 通过 `API.snowflakeId(): string` 提供随机唯一 id。每次调用 MUST 返回新的非空字符串，且在单次进程内已生成的 id MUST 互不重复。实现 MUST NOT 使用 Twitter Snowflake 64 位位布局；MAY 使用 `crypto.randomUUID()` 或等价随机源。`snowflakeId` 实现 MUST 位于 `src/parser/api/java8/java8-to-api-schema.js` 并 export，由 `src/parser/api/index.js` re-export。
 
 #### Scenario: 连续调用产生不同 id
 
@@ -174,9 +174,9 @@ class 索引 MUST 仅由 `FileModel.types[]`（compilationUnit 顶层类型）�
 
 ### Requirement: api 模块目录布局
 
-ApiSchema 转换实现 MUST 位于 `src/parser/api/`。Java8 来源的转换模块 MUST 位于 `src/parser/api/java8/`。`snowflake-id.js` MUST 位于 `src/parser/api/` 根目录。`src/parser/java8/` MUST NOT 含 toApiSchema 实现文件。
+ApiSchema 转换实现 MUST 位于 `src/parser/api/`。Java8 来源的转换模块 MUST 位于 `src/parser/api/java8/`。`snowflakeId` MUST 与 `java8ToApiSchema` 同位于 `java8-to-api-schema.js`（export 后由 `index.js` 聚合）。`src/parser/java8/` MUST NOT 含 toApiSchema 实现文件。
 
 #### Scenario: api 目录结构
 
 - **WHEN** 查看 `src/parser/api/`
-- **THEN** 存在 `snowflake-id.js` 与 `java8/` 子目录，且 `java8/` 含 `java8-to-api-schema.js`
+- **THEN** 存在 `index.js` 与 `java8/` 子目录，且 `java8/` 含 `java8-to-api-schema.js`（export `snowflakeId` 与 `java8ToApiSchema`）；不存在独立的 `snowflake-id.js`

@@ -75,9 +75,8 @@
  * @module json5
  */
 
-import { validate } from './validate.js';
-import { parse } from './parse.js';
-import { format, DEFAULT_FORMAT_OPTIONS } from './format.js';
+import { validate, parse } from './value-visitor.js';
+import { format, DEFAULT_FORMAT_OPTIONS } from './format-emitter.js';
 
 export { DEFAULT_FORMAT_OPTIONS };
 

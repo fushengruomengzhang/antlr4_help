@@ -23,7 +23,7 @@
  * @module json4
  */
 
-import { parse } from './parse.js';
+import { parse } from './value-visitor.js';
 
 /**
  * 标准 JSON 产品线（ANTLR 解析）。命名 JSON4 避免与内置 `JSON` 冲突。

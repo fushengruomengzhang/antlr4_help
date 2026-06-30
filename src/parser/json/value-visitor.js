@@ -1,5 +1,7 @@
-import { decodeJsonString } from './string-utils.js';
-import { visitArrayChildren } from '../core/visit-helpers.js';
+import { decodeJsonString } from '../core/string-decode.js';
+import { visitArrayChildren, runParsePipeline } from '../core/parse-pipeline.js';
+import JSONLexer from '../../grammars/json/JSONLexer.js';
+import JSONParser from '../../grammars/json/JSONParser.js';
 
 /**
  * @param {import('../../grammars/json/JSONParser.js').default.ValueContext} ctx
@@ -43,4 +45,19 @@ function visitObj(ctx) {
 function visitArr(ctx) {
   const values = ctx.value ? ctx.value() : [];
   return visitArrayChildren(values, visitValue);
+}
+
+/**
+ * @param {string} input
+ * @returns {unknown}
+ */
+export function parse(input) {
+  const { tree } = runParsePipeline({
+    language: 'json',
+    input,
+    Lexer: JSONLexer,
+    Parser: JSONParser,
+    entryRule: 'json',
+  });
+  return visitValue(tree.value());
 }

@@ -1,4 +1,6 @@
+import Java8Lexer from '../../grammars/java8/Java8Lexer.js';
 import Java8Parser from '../../grammars/java8/Java8Parser.js';
+import { runParsePipeline } from '../core/parse-pipeline.js';
 import {
   parseElementValue,
   parseVariableInitializer,
@@ -392,3 +394,34 @@ export function extractFirstClassName(ctx) {
 }
 
 export { Java8Parser };
+
+/**
+ * @param {string} input
+ * @param {(tree: import('../../grammars/java8/Java8Parser.js').default.CompilationUnitContext) => unknown} extract
+ */
+function runCompilationUnit(input, extract) {
+  const { tree } = runParsePipeline({
+    language: 'java8',
+    input,
+    Lexer: Java8Lexer,
+    Parser: Java8Parser,
+    entryRule: 'compilationUnit',
+  });
+  return extract(tree);
+}
+
+/**
+ * @param {string} input
+ * @returns {string | null}
+ */
+export function firstClassName(input) {
+  return runCompilationUnit(input, extractFirstClassName);
+}
+
+/**
+ * @param {string} input
+ * @returns {import('./models.js').FileModel}
+ */
+export function signatures(input) {
+  return runCompilationUnit(input, extractFileModel);
+}

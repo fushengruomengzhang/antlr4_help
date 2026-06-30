@@ -48,8 +48,7 @@
  * @module api
  */
 
-import { snowflakeId } from './snowflake-id.js';
-import { java8ToApiSchema } from './java8/java8-to-api-schema.js';
+import { snowflakeId, java8ToApiSchema } from './java8/java8-to-api-schema.js';
 
 /**
  * ApiSchema 转换产品线：随机 id 与 Java8 → 字段树。
