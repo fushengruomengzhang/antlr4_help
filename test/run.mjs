@@ -1,43 +1,20 @@
-import { mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSON4, JSON5, JAVA8, API, ParseError } from '../src/index.js';
+import {
+  assertExpectedMatch,
+  readFixture,
+} from './format-expected-utils.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const resourcesDir = join(__dirname, 'resources');
-const goldenDir = join(resourcesDir, 'golden');
-const outDir = join(resourcesDir, 'out');
 
 let failed = 0;
 
-mkdirSync(outDir, { recursive: true });
-for (const entry of readdirSync(outDir)) {
-  unlinkSync(join(outDir, entry));
-}
-
-function readFixture(name) {
-  return readFileSync(join(resourcesDir, name), 'utf8');
-}
-
+/** @param {string} name */
 function readCase(name) {
   return readFileSync(join(resourcesDir, 'cases', name), 'utf8');
-}
-
-function readGolden(name) {
-  return readFileSync(join(goldenDir, name), 'utf8');
-}
-
-function writeJson(name, value) {
-  writeFileSync(join(outDir, name), JSON.stringify(value, null, 2) + '\n');
-}
-
-function writeText(name, text) {
-  writeFileSync(join(outDir, name), text.endsWith('\n') ? text : text + '\n');
-}
-
-/** @param {string} text */
-function normalizeFormatText(text) {
-  return text.replace(/\n{2,}/g, '\n').replace(/\n?$/, '\n');
 }
 
 /** @param {string} text @param {string} [label] */
@@ -49,31 +26,6 @@ function assertNoWhitespaceOnlyLines(text, label = 'output') {
       throw new Error(`${label}: whitespace-only line at ${i + 1}: ${JSON.stringify(line)}`);
     }
   }
-}
-
-/**
- * @param {string} actual
- * @param {string} expected
- * @param {string} goldenName
- */
-function assertGoldenMatch(actual, expected, goldenName) {
-  const normActual = normalizeFormatText(actual);
-  const normExpected = normalizeFormatText(expected);
-  if (normActual === normExpected) return;
-
-  const actualLines = normActual.split('\n');
-  const expectedLines = normExpected.split('\n');
-  const max = Math.max(actualLines.length, expectedLines.length);
-  for (let i = 0; i < max; i++) {
-    if (actualLines[i] !== expectedLines[i]) {
-      throw new Error(
-        `golden mismatch (${goldenName}) at line ${i + 1}:\n` +
-          `  expected: ${JSON.stringify(expectedLines[i] ?? '')}\n` +
-          `  actual:   ${JSON.stringify(actualLines[i] ?? '')}`,
-      );
-    }
-  }
-  throw new Error(`golden mismatch (${goldenName})`);
 }
 
 /** @param {unknown[]} nodes */
@@ -124,17 +76,15 @@ function findApiPath(nodes, path) {
 
 /**
  * @param {string} label
- * @param {string | undefined} outputName
  * @param {() => unknown} fn
  * @param {{
  *   assert?: (result: unknown) => void,
- *   golden?: string,
  *   expectError?: boolean,
  *   assertError?: (error: ParseError) => void,
  * }} [options]
  */
-function runCase(label, outputName, fn, options = {}) {
-  const { assert, golden, expectError = false, assertError } = options;
+function runCase(label, fn, options = {}) {
+  const { assert, expectError = false, assertError } = options;
 
   try {
     if (expectError) {
@@ -159,22 +109,8 @@ function runCase(label, outputName, fn, options = {}) {
 
     const result = fn();
 
-    if (golden) {
-      const goldenText = readGolden(golden);
-      const actualText = String(result);
-      assertGoldenMatch(actualText, goldenText, golden);
-    }
-
     if (assert) {
       assert(result);
-    }
-
-    if (outputName) {
-      if (outputName.endsWith('.json')) {
-        writeJson(outputName, result);
-      } else {
-        writeText(outputName, result === null ? '(null)' : String(result));
-      }
     }
 
     console.log(`✓ ${label}`);
@@ -188,12 +124,12 @@ const json5Input = readFixture('test.json5.text');
 const jsonInput = readFixture('test.json.text');
 const javaInput = readFixture('test.java.text');
 
-runCase('json5 validate', 'test.json5.validate.txt', () => {
+runCase('json5 validate', () => {
   JSON5.validate(json5Input);
   return 'OK';
 });
 
-runCase('json5 parse', 'test.json5.parse.json', () => JSON5.parse(json5Input), {
+runCase('json5 parse', () => JSON5.parse(json5Input), {
   assert: (result) => {
     const names = String(result.names);
     if (names.includes('三引号注释')) {
@@ -205,15 +141,23 @@ runCase('json5 parse', 'test.json5.parse.json', () => JSON5.parse(json5Input), {
   },
 });
 
-runCase('json5 format', 'test.json5.format.text', () => JSON5.format(json5Input));
+runCase('json5 format (default)', () => {
+  const result = JSON5.format(json5Input);
+  assertExpectedMatch(result, join('json5', 'fixture.default.text'), 'json5 format default');
+  return result;
+});
 
 runCase(
   'json5 format (sortKeys)',
-  'test.json5.format.sorted.text',
   () => JSON5.format(json5Input, { sortKeys: true, compact: true }),
   {
     assert: (result) => {
       const text = String(result);
+      assertExpectedMatch(
+        text,
+        join('json5', 'fixture.sort-compact.text'),
+        'json5 format sort-compact',
+      );
       if (!text.includes('"age": 18, // 年龄')) {
         throw new Error('expected sorted+compact output to preserve "age": 18, // 年龄');
       }
@@ -230,12 +174,19 @@ runCase(
 
 runCase(
   'json5 format (compact)',
-  'test.json5.format.compact.text',
   () => JSON5.format(json5Input, { compact: true }),
-  { golden: 'test.json5.format.compact.text' },
+  {
+    assert: (result) => {
+      assertExpectedMatch(
+        String(result),
+        join('json5', 'fixture.compact.text'),
+        'json5 format compact',
+      );
+    },
+  },
 );
 
-runCase('json parse', 'test.json.parse.json', () => JSON4.parse(jsonInput), {
+runCase('json parse', () => JSON4.parse(jsonInput), {
   assert: (result) => {
     if (result['1'] !== '数字key') {
       throw new Error(`expected result["1"] === "数字key", got ${JSON.stringify(result['1'])}`);
@@ -243,15 +194,12 @@ runCase('json parse', 'test.json.parse.json', () => JSON4.parse(jsonInput), {
   },
 });
 
-runCase('java8 firstClassName', 'test.java.firstClassName.txt', () => JAVA8.firstClassName(javaInput));
+runCase('java8 firstClassName', () => JAVA8.firstClassName(javaInput));
 
-runCase('java8 peekFirstClassName', 'test.java.peekFirstClassName.txt', () =>
-  JAVA8.peekFirstClassName(javaInput),
-);
+runCase('java8 peekFirstClassName', () => JAVA8.peekFirstClassName(javaInput));
 
 runCase(
   'java8 peek vs strict invalid body (case)',
-  undefined,
   () => {
     const input = readCase('java8.peek-invalid-body.java.text');
     const peek = JAVA8.peekFirstClassName(input);
@@ -270,19 +218,18 @@ runCase(
   },
 );
 
-runCase('java8 signatures', 'test.java.signatures.json', () => JAVA8.signatures(javaInput));
+runCase('java8 signatures', () => JAVA8.signatures(javaInput));
 
 runCase(
   'api java8ToApiSchema',
-  'test.java.api.json',
   () => API.java8ToApiSchema(javaInput, { rootClass: 'User' }),
   {
     assert: (result) => {
       const nodes = /** @type {unknown[]} */ (result);
-      const expected = JSON.parse(readGolden('test.java.api.structure.json'));
+      const expected = JSON.parse(readFixture('test.java.api.structure.json'));
       const actual = stripApiIds(nodes);
       if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-        throw new Error('structure mismatch against test.java.api.structure.json golden');
+        throw new Error('structure mismatch against test.java.api.structure.json');
       }
       const ids = collectApiIds(nodes);
       if (ids.some((id) => typeof id !== 'string' || id.length === 0)) {
@@ -314,7 +261,6 @@ runCase(
 
 runCase(
   'json5 format sort+compact (case)',
-  'cases.json5.sort-compact.text',
   () => JSON5.format(readCase('json5.sort-compact.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
@@ -334,7 +280,6 @@ runCase(
 
 runCase(
   'json5 format sort inline comment (case)',
-  'cases.json5.sort-inline-comment.text',
   () => JSON5.format(readCase('json5.sort-inline-comment.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
@@ -348,7 +293,6 @@ runCase(
 
 runCase(
   'json5 format sort compact opening (case)',
-  'cases.json5.sort-compact-opening.text',
   () => JSON5.format(readCase('json5.sort-compact-opening.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
@@ -362,7 +306,6 @@ runCase(
 
 runCase(
   'json5 format sort compact gap (case)',
-  'cases.json5.sort-compact-gap.text',
   () => JSON5.format(readCase('json5.sort-compact-gap.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
@@ -377,7 +320,6 @@ runCase(
 
 runCase(
   'json5 format sort compact no blank (case)',
-  'cases.json5.sort-compact-no-blank.text',
   () => JSON5.format(readCase('json5.sort-compact-no-blank.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
@@ -391,14 +333,12 @@ runCase(
 
 runCase(
   'json5 format compact empty object indent (case)',
-  'cases.json5.compact-empty-object-indent.text',
   () =>
     JSON5.format(readCase('json5.compact-empty-object-indent.text'), {
       compact: true,
       indent: { type: 'space', size: 4 },
     }),
   {
-    golden: 'json5.compact-empty-object-indent.text',
     assert: (result) => {
       const lines = String(result).split('\n');
       const userIdx = lines.findIndex((l) => l.includes('"user": { // 用户基础信息'));
@@ -418,7 +358,6 @@ runCase(
 
 runCase(
   'json5 format sort prefix comment (case)',
-  'cases.json5.sort-prefix-comment.text',
   () => JSON5.format(readCase('json5.sort-prefix-comment.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
@@ -446,7 +385,6 @@ runCase(
 
 runCase(
   'json5 format sort prefix unicode (case)',
-  'cases.json5.sort-prefix-unicode.text',
   () => JSON5.format(readCase('json5.sort-prefix-unicode.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
@@ -475,7 +413,6 @@ runCase(
 
 runCase(
   'json5 format sort prefix newline (case)',
-  'cases.json5.sort-prefix-newline.text',
   () => JSON5.format(readCase('json5.sort-prefix-newline.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
@@ -497,7 +434,6 @@ runCase(
 
 runCase(
   'json5 format sort section inline (case)',
-  'cases.json5.sort-section-inline.text',
   () => JSON5.format(readCase('json5.sort-section-inline.text'), { sortKeys: true, compact: true }),
   {
     assert: (result) => {
@@ -513,8 +449,63 @@ runCase(
 );
 
 runCase(
+  'json5 format trailing comma stripped',
+  () => JSON5.format('{ a: 1, }'),
+  {
+    assert: (result) => {
+      const text = String(result);
+      if (text.includes(',}')) {
+        throw new Error('expected trailing comma removed before }');
+      }
+    },
+  },
+);
+
+runCase(
+  'json5 format header comment not duplicated',
+  () => JSON5.format('{\n  // json 测试\n  "a": 1\n}', { compact: true }),
+  {
+    assert: (result) => {
+      const matches = String(result).match(/\/\/ json 测试/g) ?? [];
+      if (matches.length !== 1) {
+        throw new Error(`expected one header comment, got ${matches.length}`);
+      }
+    },
+  },
+);
+
+runCase(
+  'json5 format inline comment not duplicated',
+  () => JSON5.format('{\n  "age": 18, // 年龄\n  "name": "x"\n}', { compact: true }),
+  {
+    assert: (result) => {
+      const matches = String(result).match(/\/\/ 年龄/g) ?? [];
+      if (matches.length !== 1) {
+        throw new Error(`expected one inline comment, got ${matches.length}`);
+      }
+    },
+  },
+);
+
+runCase(
+  'json5 format pretty triple-quote round-trip',
+  () => JSON5.format("{ a: ''' // opener\nline1\nline2''' }", { compact: false }),
+  {
+    assert: (result) => {
+      const text = String(result);
+      if (!/'''/.test(text)) {
+        throw new Error('expected triple-single output');
+      }
+      if (/'''[\s\S]*"""/.test(text)) {
+        throw new Error('expected consistent triple-quote delimiter family');
+      }
+      JSON5.format(text, { compact: false });
+    },
+  },
+);
+
+runCase(
   'json5 validate (invalid)',
-  undefined,
   () => {
     JSON5.validate(readCase('json5.invalid.text'));
   },
@@ -530,7 +521,6 @@ runCase(
 
 runCase(
   'json5 triple opener line (parse)',
-  undefined,
   () => JSON5.parse(readCase('json5.triple-opener-line.text')),
   {
     assert: (result) => {
@@ -547,7 +537,6 @@ runCase(
 
 runCase(
   'json5 triple opener block (parse)',
-  undefined,
   () => JSON5.parse(readCase('json5.triple-opener-block.text')),
   {
     assert: (result) => {
@@ -564,7 +553,6 @@ runCase(
 
 runCase(
   'json5 triple unclosed (validate)',
-  undefined,
   () => JSON5.validate(readCase('json5.triple-unclosed.text')),
   {
     expectError: true,
@@ -578,7 +566,6 @@ runCase(
 
 runCase(
   'json5 triple mismatch (validate)',
-  undefined,
   () => JSON5.validate(readCase('json5.triple-mismatch.text')),
   {
     expectError: true,
@@ -590,8 +577,8 @@ runCase(
   },
 );
 
-console.log('\n输出目录:', outDir);
-
 if (failed > 0) {
   process.exit(1);
 }
+
+console.log('run.mjs: all tests passed');

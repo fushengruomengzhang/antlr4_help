@@ -37,10 +37,10 @@ bench('format sort+compact (fixture)', () =>
 );
 
 console.log('');
-for (const n of [50, 200, 500]) {
+for (const n of [50, 200, 500, 2000]) {
   const big = `{${Array.from({ length: n }, (_, i) => `k${i}: ${i}`).join(', ')}}`;
-  bench(`compact (${n} keys)`, () => JSON5.format(big, { compact: true }));
-  bench(`sort+compact (${n} keys)`, () =>
+  bench(`format compact (${n} keys)`, () => JSON5.format(big, { compact: true }));
+  bench(`format sort+compact (${n} keys)`, () =>
     JSON5.format(big, { sortKeys: true, compact: true }),
   );
 }
