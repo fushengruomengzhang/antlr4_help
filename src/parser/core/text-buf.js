@@ -3,9 +3,7 @@
  */
 export class TextBuf {
   constructor() {
-    /** @type {string} 已 materialize 的 completed 前缀 */
-    this.head = '';
-    /** @type {string[]} 当前行/段落的待拼接块 */
+    /** @type {string[]} */
     this.parts = [];
   }
 
@@ -23,11 +21,52 @@ export class TextBuf {
 
   /** @returns {string} */
   materialize() {
-    return this.parts.length === 0 ? this.head : this.head + this.parts.join('');
+    return this.parts.join('');
   }
 
   toString() {
     return this.materialize();
+  }
+
+  /** @returns {number} */
+  _lastNewlinePartIndex() {
+    for (let i = this.parts.length - 1; i >= 0; i--) {
+      if (this.parts[i].includes('\n')) return i;
+    }
+    return -1;
+  }
+
+  /** Trim trailing spaces/tabs on the line after the last `\n` (matches legacy `\n[ \t]+$` → `\n`). */
+  _trimTrailingWhitespaceAfterLastNewline() {
+    const idx = this._lastNewlinePartIndex();
+    if (idx < 0) return;
+    const part = this.parts[idx];
+    const nl = part.lastIndexOf('\n');
+    let prefix = part.slice(0, nl + 1);
+    let suffix = part.slice(nl + 1);
+    for (let j = idx + 1; j < this.parts.length; j++) {
+      suffix += this.parts[j];
+    }
+    suffix = suffix.replace(/[ \t]+$/, '');
+    this.parts[idx] = prefix + suffix;
+    this.parts.length = idx + 1;
+  }
+
+  /** @returns {boolean} */
+  _endsWithNewline() {
+    for (let i = this.parts.length - 1; i >= 0; i--) {
+      const p = this.parts[i];
+      if (p.length === 0) continue;
+      return p.endsWith('\n');
+    }
+    return false;
+  }
+
+  _finishLineForBreak() {
+    this._trimTrailingWhitespaceAfterLastNewline();
+    if (!this._endsWithNewline()) {
+      this.push('\n');
+    }
   }
 
   /**
@@ -36,11 +75,8 @@ export class TextBuf {
    * @param {number} depth
    */
   beginMemberLine(indentAtMemberDepth, depth) {
-    let line = this.materialize();
-    line = line.replace(/\n[ \t]+$/, '\n');
-    if (!line.endsWith('\n')) line += '\n';
-    this.head = line + indentAtMemberDepth(depth + 1);
-    this.parts = [];
+    this._finishLineForBreak();
+    this.push(indentAtMemberDepth(depth + 1));
   }
 
   /**
@@ -49,10 +85,7 @@ export class TextBuf {
    * @param {number} depth
    */
   beginCloseLine(indentAtCloseDepth, depth) {
-    let line = this.materialize();
-    line = line.replace(/\n[ \t]+$/, '\n');
-    if (!line.endsWith('\n')) line += '\n';
-    this.head = line + indentAtCloseDepth(depth);
-    this.parts = [];
+    this._finishLineForBreak();
+    this.push(indentAtCloseDepth(depth));
   }
 }

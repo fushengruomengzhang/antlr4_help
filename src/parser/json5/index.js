@@ -75,14 +75,15 @@
  * @module json5
  */
 
-import { validate, parse } from './value-visitor.js';
-import { format, DEFAULT_FORMAT_OPTIONS } from './format-emitter.js';
+import { validate } from './validate.js';
+import { parse } from './parse.js';
+import { format, DEFAULT_FORMAT_OPTIONS } from './format.js';
 
 export { DEFAULT_FORMAT_OPTIONS };
 
 /**
  * JSON5 产品线：validate / parse / format。
- * @type {{ validate: (input: string) => void, parse: (input: string) => unknown, format: (input: string, options?: import('./format-emitter.js').FormatOptions) => string }}
+ * @type {{ validate: (input: string) => void, parse: (input: string) => unknown, format: (input: string, options?: import('./format/format-options.js').FormatOptions) => string }}
  */
 export const JSON5 = {
   validate,

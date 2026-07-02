@@ -2,6 +2,10 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSON4, JSON5, JAVA8, API, ParseError } from '../src/index.js';
+import { buildDocumentAst } from '../src/parser/json5/format/ast-builder.js';
+import Json5Lexer from '../src/grammars/json5/Json5Lexer.js';
+import Json5Parser from '../src/grammars/json5/Json5Parser.js';
+import { runParsePipeline } from '../src/parser/core/parse-pipeline.js';
 import {
   assertExpectedMatch,
   readFixture,
@@ -353,6 +357,70 @@ runCase(
         );
       }
     },
+  },
+);
+
+runCase(
+  'json5 ast-builder slots (sort prefix / openRight)',
+  () => {
+    const prefixInput = readCase('json5.sort-prefix-comment.text');
+    const { tree, tokenStream } = runParsePipeline({
+      language: 'json5',
+      input: prefixInput,
+      Lexer: Json5Lexer,
+      Parser: Json5Parser,
+      entryRule: 'json5',
+      fillTokens: true,
+    });
+    const doc = buildDocumentAst(tree, tokenStream);
+    const obj = /** @type {{ kind: string, openRight: string, entries: Array<{ sortKey: string, before: string, suffixSort: string }> }} */ (
+      doc.value
+    );
+    if (obj.kind !== 'object') {
+      throw new Error('expected object root');
+    }
+    const chinese = obj.entries.find((e) => e.sortKey === '中文字段');
+    if (!chinese?.before.includes('中文 key')) {
+      throw new Error('expected // 中文 key in 中文字段.before (prefix slot)');
+    }
+    const dollar = obj.entries.find((e) => e.sortKey === '$key');
+    if (dollar?.before.includes('中文 key')) {
+      throw new Error('expected // 中文 key not on $key.before');
+    }
+
+    const openingInput = readCase('json5.sort-compact-opening.text');
+    const opened = runParsePipeline({
+      language: 'json5',
+      input: openingInput,
+      Lexer: Json5Lexer,
+      Parser: Json5Parser,
+      entryRule: 'json5',
+      fillTokens: true,
+    });
+    const openDoc = buildDocumentAst(opened.tree, opened.tokenStream);
+    const openObj = /** @type {{ openRight: string }} */ (openDoc.value);
+    if (!openObj.openRight.includes('head')) {
+      throw new Error('expected container openRight to include // head');
+    }
+
+    const inlineInput = readCase('json5.sort-inline-comment.text');
+    const inlineParsed = runParsePipeline({
+      language: 'json5',
+      input: inlineInput,
+      Lexer: Json5Lexer,
+      Parser: Json5Parser,
+      entryRule: 'json5',
+      fillTokens: true,
+    });
+    const inlineDoc = buildDocumentAst(inlineParsed.tree, inlineParsed.tokenStream);
+    const inlineObj = /** @type {{ entries: Array<{ sortKey: string, suffixSort: string }> }} */ (
+      inlineDoc.value
+    );
+    const age = inlineObj.entries.find((e) => e.sortKey === 'age');
+    if (!age?.suffixSort.includes('年龄')) {
+      throw new Error('expected // 年龄 in age.suffixSort (inline member suffix)');
+    }
+    return 'OK';
   },
 );
 

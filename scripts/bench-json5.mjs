@@ -7,6 +7,12 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSON5 } from '../src/index.js';
+import Json5Lexer from '../src/grammars/json5/Json5Lexer.js';
+import Json5Parser from '../src/grammars/json5/Json5Parser.js';
+import { runParsePipeline } from '../src/parser/core/parse-pipeline.js';
+import { buildDocumentAst } from '../src/parser/json5/format/ast-builder.js';
+import { transformDocumentAst } from '../src/parser/json5/format/ast-transform.js';
+import { emitDocument } from '../src/parser/json5/format/emit.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
@@ -22,8 +28,42 @@ function bench(label, fn) {
   const t0 = performance.now();
   for (let i = 0; i < RUNS; i++) fn();
   const ms = (performance.now() - t0) / RUNS;
-  console.log(`${label.padEnd(32)} ${ms.toFixed(3)} ms/op`);
+  console.log(`${label.padEnd(36)} ${ms.toFixed(3)} ms/op`);
   return ms;
+}
+
+/**
+ * @param {string} label
+ * @param {string} input
+ * @param {import('../src/parser/json5/format/format-options.js').FormatOptions} [options]
+ */
+function benchPhases(label, input, options = {}) {
+  let cached;
+  console.log(`\n${label} (segmented, ${RUNS} runs):`);
+  bench(`  parse+fill`, () => {
+    cached = runParsePipeline({
+      language: 'json5',
+      input,
+      Lexer: Json5Lexer,
+      Parser: Json5Parser,
+      entryRule: 'json5',
+      fillTokens: true,
+    });
+  });
+  bench(`  buildDocumentAst`, () => {
+    buildDocumentAst(cached.tree, cached.tokenStream);
+  });
+  const ast = buildDocumentAst(cached.tree, cached.tokenStream);
+  bench(`  transform`, () => {
+    transformDocumentAst(ast, options);
+  });
+  const transformed = transformDocumentAst(ast, options);
+  bench(`  emit`, () => {
+    emitDocument(transformed, options);
+  });
+  bench(`  format e2e`, () => {
+    JSON5.format(input, options);
+  });
 }
 
 console.log(`JSON5 bench (${RUNS} runs after ${WARMUP} warmup)\n`);
@@ -44,3 +84,10 @@ for (const n of [50, 200, 500, 2000]) {
     JSON5.format(big, { sortKeys: true, compact: true }),
   );
 }
+
+benchPhases('fixture default', fixture, {});
+benchPhases('fixture sort+compact', fixture, { sortKeys: true, compact: true });
+
+const big2000 = `{${Array.from({ length: 2000 }, (_, i) => `k${i}: ${i}`).join(', ')}}`;
+benchPhases('2000 keys compact', big2000, { compact: true });
+benchPhases('2000 keys sort+compact', big2000, { sortKeys: true, compact: true });
