@@ -1,12 +1,11 @@
 import { TextBuf } from '../../core/text-buf.js';
 import { decodeJson5String, encodeDoubleQuotedString } from '../decode.js';
-import { normalizeFormatOptions } from './format-options.js';
 import { CommentSlicer } from './token-slice.js';
 
 export class DocumentEmitter {
   /**
    * @param {import('antlr4').CommonTokenStream} tokenStream
-   * @param {Required<import('./format-options.js').FormatOptions>} options
+   * @param {import('../format.js').ResolvedFormatOptions} options
    * @param {number} [inputLen]
    */
   constructor(tokenStream, options, inputLen = 0) {
@@ -30,20 +29,20 @@ export class DocumentEmitter {
     return unit;
   }
 
-  /** @param {import('./types.js').AnchorTriplet} triplet */
+  /** @param {import('./token-slice.js').AnchorTriplet} triplet */
   openInlineText(triplet) {
     const parts = this.slicer.suffixComments(triplet, true);
     return parts.join(' ');
   }
 
-  /** @param {import('./types.js').AnchorTriplet} triplet */
+  /** @param {import('./token-slice.js').AnchorTriplet} triplet */
   inlineSuffix(triplet) {
     const parts = this.slicer.suffixComments(triplet, true);
     if (parts.length === 0) return '';
     return parts.join(' ');
   }
 
-  /** @param {import('./types.js').ObjectEntry} entry @param {boolean} isLast */
+  /** @param {import('./ast-builder-transform.js').ObjectEntry} entry @param {boolean} isLast */
   emitEntryEnd(entry, isLast) {
     const inline = this.inlineSuffix(entry.end);
     if (!isLast) return inline ? ', ' + inline : ',';
@@ -51,18 +50,18 @@ export class DocumentEmitter {
     return '';
   }
 
-  /** @param {import('./types.js').ArrayEntry} entry @param {boolean} isLast */
+  /** @param {import('./ast-builder-transform.js').ArrayEntry} entry @param {boolean} isLast */
   emitArrayEntryEnd(entry, isLast) {
-    return this.emitEntryEnd(/** @type {import('./types.js').ObjectEntry} */ (entry), isLast);
+    return this.emitEntryEnd(/** @type {import('./ast-builder-transform.js').ObjectEntry} */ (entry), isLast);
   }
 
-  /** @param {import('./types.js').AnchorTriplet} triplet */
+  /** @param {import('./token-slice.js').AnchorTriplet} triplet */
   prefixCommentLines(triplet) {
     return this.slicer.prefixComments(triplet);
   }
 
   /**
-   * @param {import('./types.js').AnchorTriplet} triplet
+   * @param {import('./token-slice.js').AnchorTriplet} triplet
    * @param {number} depth
    */
   emitPrefixLines(triplet, depth) {
@@ -73,7 +72,7 @@ export class DocumentEmitter {
   }
 
   /**
-   * @param {import('./types.js').ValueNode} node
+   * @param {import('./ast-builder-transform.js').ValueNode} node
    * @param {number} depth
    */
   emitValue(node, depth) {
@@ -97,7 +96,7 @@ export class DocumentEmitter {
     }
   }
 
-  /** @param {import('./types.js').DocumentNode} doc */
+  /** @param {import('./ast-builder-transform.js').DocumentNode} doc */
   emitDocument(doc) {
     const buf = new TextBuf();
     buf.push(this.slicer.hiddenGap(doc.lead.prev, doc.lead.current));
@@ -117,7 +116,7 @@ export class DocumentEmitter {
     return source;
   }
 
-  /** @param {import('./types.js').TripleSingleNode} node */
+  /** @param {import('./ast-builder-transform.js').TripleSingleNode} node */
   emitTripleSingle(node) {
     const buf = new TextBuf();
     buf.push("'''");
@@ -127,7 +126,7 @@ export class DocumentEmitter {
     return buf.toString();
   }
 
-  /** @param {import('./types.js').TripleDoubleNode} node */
+  /** @param {import('./ast-builder-transform.js').TripleDoubleNode} node */
   emitTripleDouble(node) {
     const buf = new TextBuf();
     buf.push('"""');
@@ -138,7 +137,7 @@ export class DocumentEmitter {
   }
 
   /**
-   * @param {import('./types.js').ValueNode} node
+   * @param {import('./ast-builder-transform.js').ValueNode} node
    * @param {number} depth
    */
   emitMemberValue(node, depth) {
@@ -152,7 +151,7 @@ export class DocumentEmitter {
   }
 
   /**
-   * @param {import('./types.js').ObjectNode} node
+   * @param {import('./ast-builder-transform.js').ObjectNode} node
    * @param {number} depth
    */
   emitObjectCompact(node, depth) {
@@ -205,7 +204,7 @@ export class DocumentEmitter {
   }
 
   /**
-   * @param {import('./types.js').ArrayNode} node
+   * @param {import('./ast-builder-transform.js').ArrayNode} node
    * @param {number} depth
    */
   emitArrayCompact(node, depth) {
@@ -258,7 +257,7 @@ export class DocumentEmitter {
   }
 
   /**
-   * @param {import('./types.js').ObjectNode} node
+   * @param {import('./ast-builder-transform.js').ObjectNode} node
    * @param {number} depth
    */
   emitObjectPretty(node, depth) {
@@ -305,7 +304,7 @@ export class DocumentEmitter {
   }
 
   /**
-   * @param {import('./types.js').ObjectNode} node
+   * @param {import('./ast-builder-transform.js').ObjectNode} node
    */
   closeBeforeText(node) {
     const lastValStop =
@@ -316,7 +315,7 @@ export class DocumentEmitter {
   }
 
   /**
-   * @param {import('./types.js').ArrayNode} node
+   * @param {import('./ast-builder-transform.js').ArrayNode} node
    * @param {number} depth
    */
   emitArrayPretty(node, depth) {
@@ -362,7 +361,7 @@ export class DocumentEmitter {
   }
 
   /**
-   * @param {import('./types.js').ArrayNode} node
+   * @param {import('./ast-builder-transform.js').ArrayNode} node
    */
   closeBeforeTextArray(node) {
     const lastValStop =
@@ -374,13 +373,12 @@ export class DocumentEmitter {
 }
 
 /**
- * @param {import('./types.js').DocumentNode} doc
+ * @param {import('./ast-builder-transform.js').DocumentNode} doc
  * @param {import('antlr4').CommonTokenStream} tokenStream
- * @param {import('./format-options.js').FormatOptions} [options]
+ * @param {import('../format.js').ResolvedFormatOptions} options
  * @param {string} [input]
  */
 export function emitDocument(doc, tokenStream, options, input = '') {
-  const normalized = normalizeFormatOptions(options);
-  const emitter = new DocumentEmitter(tokenStream, normalized, input.length);
+  const emitter = new DocumentEmitter(tokenStream, options, input.length);
   return emitter.emitDocument(doc);
 }

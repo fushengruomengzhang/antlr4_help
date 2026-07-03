@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSON4, JSON5, JAVA8, API, ParseError } from '../src/index.js';
-import { buildDocumentAst } from '../src/parser/json5/format/ast-builder.js';
+import { buildDocumentAst } from '../src/parser/json5/format/ast-builder-transform.js';
 import { CommentSlicer } from '../src/parser/json5/format/token-slice.js';
 import Json5Lexer from '../src/grammars/json5/Json5Lexer.js';
 import Json5Parser from '../src/grammars/json5/Json5Parser.js';
@@ -375,7 +375,7 @@ runCase(
     });
     const doc = buildDocumentAst(tree, tokenStream, prefixInput);
     const slicer = new CommentSlicer(tokenStream, prefixInput.length);
-    const obj = /** @type {{ kind: string, open: import('../src/parser/json5/format/types.js').AnchorTriplet, entries: Array<{ sortKey: string, key: import('../src/parser/json5/format/types.js').AnchorTriplet, end: import('../src/parser/json5/format/types.js').AnchorTriplet }> }} */ (
+    const obj = /** @type {{ kind: string, open: import('../src/parser/json5/format/token-slice.js').AnchorTriplet, entries: Array<{ sortKey: string, key: import('../src/parser/json5/format/token-slice.js').AnchorTriplet, end: import('../src/parser/json5/format/token-slice.js').AnchorTriplet }> }} */ (
       doc.value
     );
     if (obj.kind !== 'object') {
@@ -403,7 +403,7 @@ runCase(
     });
     const openDoc = buildDocumentAst(opened.tree, opened.tokenStream, openingInput);
     const openSlicer = new CommentSlicer(opened.tokenStream, openingInput.length);
-    const openObj = /** @type {{ open: import('../src/parser/json5/format/types.js').AnchorTriplet }} */ (openDoc.value);
+    const openObj = /** @type {{ open: import('../src/parser/json5/format/token-slice.js').AnchorTriplet }} */ (openDoc.value);
     const openInline = openSlicer.suffixComments(openObj.open, true).join('');
     if (!openInline.includes('head')) {
       throw new Error('expected container open suffix to include // head');
@@ -420,7 +420,7 @@ runCase(
     });
     const inlineDoc = buildDocumentAst(inlineParsed.tree, inlineParsed.tokenStream, inlineInput);
     const inlineSlicer = new CommentSlicer(inlineParsed.tokenStream, inlineInput.length);
-    const inlineObj = /** @type {{ entries: Array<{ sortKey: string, end: import('../src/parser/json5/format/types.js').AnchorTriplet }> }} */ (
+    const inlineObj = /** @type {{ entries: Array<{ sortKey: string, end: import('../src/parser/json5/format/token-slice.js').AnchorTriplet }> }} */ (
       inlineDoc.value
     );
     const age = inlineObj.entries.find((e) => e.sortKey === 'age');

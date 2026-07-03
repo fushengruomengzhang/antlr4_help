@@ -83,7 +83,7 @@ export { DEFAULT_FORMAT_OPTIONS };
 
 /**
  * JSON5 产品线：validate / parse / format。
- * @type {{ validate: (input: string) => void, parse: (input: string) => unknown, format: (input: string, options?: import('./format/format-options.js').FormatOptions) => string }}
+ * @type {{ validate: (input: string) => void, parse: (input: string) => unknown, format: (input: string, options?: import('./format.js').FormatOptions) => string }}
  */
 export const JSON5 = {
   validate,

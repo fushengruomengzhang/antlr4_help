@@ -2,19 +2,29 @@ import antlr4 from 'antlr4';
 
 const HIDDEN = antlr4.Token.HIDDEN_CHANNEL;
 
-/** @returns {import('./types.js').TokenCoord} */
+/**
+ * @typedef {object} TokenCoord
+ * @property {number} idx
+ * @property {number} start
+ * @property {number} stop
+ * @property {number} line
+ * @property {number} col
+ * @property {string} type
+ */
+
+/** @returns {TokenCoord} */
 export function sentinelStart() {
   return { idx: -1, start: 0, stop: 0, line: 1, col: 0, type: 'SENTINEL_START' };
 }
 
-/** @param {number} len @returns {import('./types.js').TokenCoord} */
+/** @param {number} len @returns {TokenCoord} */
 export function sentinelEnd(len) {
   return { idx: Number.MAX_SAFE_INTEGER, start: len, stop: len, line: 0, col: 0, type: 'SENTINEL_END' };
 }
 
 /**
  * @param {import('antlr4').Token | null | undefined} token
- * @returns {import('./types.js').TokenCoord | null}
+ * @returns {TokenCoord | null}
  */
 export function toCoord(token) {
   if (!token || token.tokenIndex == null) return null;
@@ -29,10 +39,17 @@ export function toCoord(token) {
 }
 
 /**
- * @param {import('./types.js').TokenCoord} prev
- * @param {import('./types.js').TokenCoord} current
- * @param {import('./types.js').TokenCoord} next
- * @returns {import('./types.js').AnchorTriplet}
+ * @typedef {object} AnchorTriplet
+ * @property {TokenCoord} prev
+ * @property {TokenCoord} current
+ * @property {TokenCoord} next
+ */
+
+/**
+ * @param {TokenCoord} prev
+ * @param {TokenCoord} current
+ * @param {TokenCoord} next
+ * @returns {AnchorTriplet}
  */
 export function makeTriplet(prev, current, next) {
   return { prev, current, next };
@@ -67,7 +84,7 @@ export class CommentSlicer {
     }
   }
 
-  /** @param {import('./types.js').TokenCoord} coord */
+  /** @param {TokenCoord} coord */
   _isBoundaryPrev(coord) {
     if (coord.type === 'SENTINEL_START' || coord.type === 'SENTINEL_END') return true;
     this.ensureFilled();
@@ -76,15 +93,15 @@ export class CommentSlicer {
     return t.text === ',' || t.text === '{' || t.text === '[' || t.text === '}' || t.text === ']';
   }
 
-  /** @param {import('./types.js').AnchorTriplet} triplet @returns {string[]} */
+  /** @param {AnchorTriplet} triplet @returns {string[]} */
   prefixComments(triplet) {
     const excludeLine = this._isBoundaryPrev(triplet.prev) ? triplet.prev.line : undefined;
     return this._sliceComments(triplet.prev, triplet.current, false, { excludeLine });
   }
 
   /**
-   * @param {import('./types.js').TokenCoord} from
-   * @param {import('./types.js').TokenCoord} to
+   * @param {TokenCoord} from
+   * @param {TokenCoord} to
    */
   hiddenGap(from, to) {
     this.ensureFilled();
@@ -117,7 +134,7 @@ export class CommentSlicer {
     return out;
   }
 
-  /** @param {import('./types.js').TokenCoord} coord */
+  /** @param {TokenCoord} coord */
   hiddenRightText(coord) {
     this.ensureFilled();
     const tokens = this.stream.tokens;
@@ -133,8 +150,8 @@ export class CommentSlicer {
 
   /**
    * Hidden immediately before `close`, excluding the span after the last member value.
-   * @param {import('./types.js').AnchorTriplet} closeTriplet
-   * @param {import('./types.js').TokenCoord} lastValStop
+   * @param {AnchorTriplet} closeTriplet
+   * @param {TokenCoord} lastValStop
    */
   closeBeforeText(closeTriplet, lastValStop) {
     this.ensureFilled();
@@ -150,7 +167,7 @@ export class CommentSlicer {
   }
 
   /**
-   * @param {import('./types.js').AnchorTriplet} triplet
+   * @param {AnchorTriplet} triplet
    * @param {boolean} [sameLineOnly]
    * @returns {string[]}
    */
@@ -158,14 +175,14 @@ export class CommentSlicer {
     return this._sliceComments(triplet.current, triplet.next, sameLineOnly);
   }
 
-  /** @param {import('./types.js').TokenCoord} from @param {import('./types.js').TokenCoord} to */
+  /** @param {TokenCoord} from @param {TokenCoord} to */
   prefixText(from, to) {
     return this._sliceComments(from, to, false, { excludeLine: from.line }).join('');
   }
 
   /**
-   * @param {import('./types.js').TokenCoord} from
-   * @param {import('./types.js').TokenCoord} to
+   * @param {TokenCoord} from
+   * @param {TokenCoord} to
    * @param {boolean} sameLineOnly
    * @param {{ excludeLine?: number }} [opts]
    */
@@ -217,7 +234,7 @@ export class CommentSlicer {
   }
 
   /**
-   * @param {import('./types.js').AnchorTriplet} triplet
+   * @param {AnchorTriplet} triplet
    * @returns {{ inline: string, hasMultiline: boolean }}
    */
   openLayout(triplet) {

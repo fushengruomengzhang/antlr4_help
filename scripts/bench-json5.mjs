@@ -7,11 +7,11 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSON5 } from '../src/index.js';
+import { DEFAULT_FORMAT_OPTIONS } from '../src/parser/json5/format.js';
 import Json5Lexer from '../src/grammars/json5/Json5Lexer.js';
 import Json5Parser from '../src/grammars/json5/Json5Parser.js';
 import { runParsePipeline } from '../src/parser/core/parse-pipeline.js';
-import { buildDocumentAst } from '../src/parser/json5/format/ast-builder.js';
-import { transformDocumentAst } from '../src/parser/json5/format/ast-transform.js';
+import { buildDocumentAst, transformDocumentAst } from '../src/parser/json5/format/ast-builder-transform.js';
 import { emitDocument } from '../src/parser/json5/format/emit.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -33,11 +33,26 @@ function bench(label, fn) {
 }
 
 /**
+ * @param {import('../src/parser/json5/format.js').FormatOptions} [options]
+ * @returns {import('../src/parser/json5/format.js').ResolvedFormatOptions}
+ */
+function resolveFormatOptions(options = {}) {
+  const indent = options.indent ?? DEFAULT_FORMAT_OPTIONS.indent;
+  return {
+    indent:
+      indent.type === 'tab' ? { type: 'tab' } : { type: 'space', size: indent.size ?? 2 },
+    sortKeys: options.sortKeys ?? false,
+    compact: options.compact ?? false,
+  };
+}
+
+/**
  * @param {string} label
  * @param {string} input
- * @param {import('../src/parser/json5/format/format-options.js').FormatOptions} [options]
+ * @param {import('../src/parser/json5/format.js').FormatOptions} [options]
  */
 function benchPhases(label, input, options = {}) {
+  const resolved = resolveFormatOptions(options);
   let cached;
   console.log(`\n${label} (segmented, ${RUNS} runs):`);
   bench(`  parse+fill`, () => {
@@ -55,11 +70,11 @@ function benchPhases(label, input, options = {}) {
   });
   const ast = buildDocumentAst(cached.tree, cached.tokenStream, input);
   bench(`  transform`, () => {
-    transformDocumentAst(ast, options);
+    transformDocumentAst(ast, resolved);
   });
-  const transformed = transformDocumentAst(ast, options);
+  const transformed = transformDocumentAst(ast, resolved);
   bench(`  emit`, () => {
-    emitDocument(transformed, cached.tokenStream, options, input);
+    emitDocument(transformed, cached.tokenStream, resolved, input);
   });
   bench(`  format e2e`, () => {
     JSON5.format(input, options);
