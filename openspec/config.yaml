@@ -1,5 +1,11 @@
 schema: spec-driven
 
+context: |
+  OpenSpec 双语文档约定：
+  - 权威规范：`openspec/specs/<module>/spec.md`（英文，`openspec validate` 只校验此文件）
+  - 中文 mirror：`openspec/specs/<module>/spec.zh.md`（与 spec.md 语义等价；保留 Requirement/Scenario/WHEN/THEN/AND/SHALL 等英文关键字）
+  - 变更 spec.md 时 MUST 同步更新同目录 spec.zh.md
+
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.
