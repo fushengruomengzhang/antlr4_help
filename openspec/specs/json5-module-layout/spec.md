@@ -8,17 +8,72 @@ Define the independent API module layout for JSON5 validate, parse, and format, 
 
 ### Requirement: Three independent API entry modules
 
-The JSON5 product line SHALL expose `validate`, `parse`, and `format` through three separate top-level modules under `src/parser/json5/`: `validate.js`, `parse.js`, and `format.js`. The public aggregator `index.js` SHALL import only these three modules and re-export `JSON5` and `DEFAULT_FORMAT_OPTIONS`. Signatures and documented behavior of `JSON5.validate`, `JSON5.parse`, and `JSON5.format` SHALL NOT change.
+The JSON5 product line SHALL expose `validate`, `parse`, and `format` through three separate top-level modules under `src/parser/json5/`: `validate.js`, `parse.js`, and `format.js`. The public aggregator `index.js` SHALL import only these three modules and re-export `JSON5` and `DEFAULT_FORMAT_OPTIONS`. Signatures of `JSON5.validate` and `JSON5.parse` SHALL NOT change. `JSON5.format(input, options?)` SHALL remain a two-argument function; **`options.indent` SHALL be a string** (breaking change from the prior object form).
 
 #### Scenario: Index aggregates three entries
 
 - **WHEN** a consumer imports `{ JSON5, DEFAULT_FORMAT_OPTIONS }` from `src/parser/json5/index.js`
-- **THEN** `JSON5.validate`, `JSON5.parse`, and `JSON5.format` SHALL be callable with the same signatures as before this change
+- **THEN** `JSON5.validate`, `JSON5.parse`, and `JSON5.format` SHALL be callable
+- **AND** `DEFAULT_FORMAT_OPTIONS.indent` SHALL be the string `'  '`
 
 #### Scenario: API modules do not cross-import
 
 - **WHEN** the dependency graph of `validate.js`, `parse.js`, and `format.js` is inspected
 - **THEN** none of these three files SHALL import any of the other two
+
+---
+
+### Requirement: Package subpath exports for selective JSON5 imports
+
+The package SHALL declare Node.js `exports` subpaths so consumers can import only the JSON5 capability they need without loading unrelated modules. At minimum:
+
+- `antlr4_help` (`.`) — full library entry (`JSON5`, `JSON4`, `JAVA8`, `API`, `ParseError`, `DEFAULT_FORMAT_OPTIONS`)
+- `antlr4_help/json5` — full JSON5 namespace (`JSON5.validate`, `JSON5.parse`, `JSON5.format`, `DEFAULT_FORMAT_OPTIONS`)
+- `antlr4_help/json5/validate` — validate-only facade
+- `antlr4_help/json5/parse` — parse-only facade
+- `antlr4_help/json5/format` — format-only facade plus `DEFAULT_FORMAT_OPTIONS`
+
+Each single-capability subpath SHALL export a `JSON5` object containing **only** the methods for that capability, using the same method names as the full namespace (`validate`, `parse`, or `format`).
+
+#### Scenario: Validate subpath exposes JSON5.validate
+
+- **WHEN** a consumer runs `import { JSON5 } from 'antlr4_help/json5/validate'`
+- **THEN** `JSON5.validate(input)` SHALL be callable
+- **AND** `JSON5` SHALL NOT include `parse` or `format` properties
+
+#### Scenario: Parse subpath exposes JSON5.parse
+
+- **WHEN** a consumer runs `import { JSON5 } from 'antlr4_help/json5/parse'`
+- **THEN** `JSON5.parse(input)` SHALL be callable
+- **AND** `JSON5` SHALL NOT include `validate` or `format` properties
+
+#### Scenario: Format subpath exposes JSON5.format and defaults
+
+- **WHEN** a consumer runs `import { JSON5, DEFAULT_FORMAT_OPTIONS } from 'antlr4_help/json5/format'`
+- **THEN** `JSON5.format(input, options?)` SHALL be callable
+- **AND** `DEFAULT_FORMAT_OPTIONS` SHALL be available
+- **AND** `JSON5` SHALL NOT include `validate` or `parse` properties
+
+#### Scenario: Full json5 subpath matches aggregator
+
+- **WHEN** a consumer imports from `antlr4_help/json5`
+- **THEN** the exported `JSON5` object SHALL provide `validate`, `parse`, and `format` with the same behavior as `src/parser/json5/index.js`
+
+#### Scenario: Root entry unchanged
+
+- **WHEN** a consumer imports `{ JSON5 } from 'antlr4_help'`
+- **THEN** all three JSON5 methods SHALL remain available with unchanged behavior
+
+---
+
+### Requirement: Validate-only import does not load format implementation
+
+Importing `antlr4_help/json5/validate` SHALL NOT transitively import any module under `src/parser/json5/format/`.
+
+#### Scenario: Validate subpath dependency graph
+
+- **WHEN** the static import graph of `antlr4_help/json5/validate` is analyzed
+- **THEN** no file under `src/parser/json5/format/` SHALL appear in the graph
 
 ---
 

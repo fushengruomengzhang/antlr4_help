@@ -153,7 +153,7 @@ Array elements SHALL NOT be sorted.
 
 ### Requirement: Format output behavior unchanged for public options
 
-Format output SHALL preserve existing documented behavior for `indent`, `compact`, and `sortKeys`.
+Format output SHALL preserve existing documented behavior for `compact` and `sortKeys`. The `indent` option SHALL be a string representing the indentation unit repeated once per nesting depth; default SHALL be `'  '` (two spaces per level), producing the same pretty layout as the previous `{ type: 'space', size: 2 }` default.
 
 Pretty mode (`compact: false`) SHALL use clear structural line breaks, normalize single-line string values to double quotes, convert `'''` multiline strings to `"""`, remove trailing commas from objects and arrays, and preserve JSON5 key source forms.
 
@@ -162,6 +162,23 @@ Compact mode (`compact: true`) SHALL use compact layout, preserve source string 
 When both `sortKeys: true` and `compact: true` are set, layout SHALL match compact mode with only object key order differing.
 
 Trailing comma removal SHALL be applied in transform or emit to `trailingSep` (and equivalent array trailing separator), not during AST build.
+
+At nesting depth `d` (0 = root container), emit SHALL prefix member/close lines with `indent.repeat(d)` for pretty and compact member-line layout.
+
+#### Scenario: Default indent matches legacy two-space pretty output
+
+- **WHEN** `JSON5.format(input)` is called with default options on the comment-heavy fixture
+- **THEN** output SHALL match the existing `test/resources/expected/json5/fixture.default.text` baseline byte-for-byte
+
+#### Scenario: Tab indent per level
+
+- **WHEN** `JSON5.format(input, { indent: '\t' })` is called in pretty mode
+- **THEN** each nested level SHALL be indented with one additional tab character per depth
+
+#### Scenario: Custom indent string per level
+
+- **WHEN** `JSON5.format(input, { indent: '    ' })` is called in pretty mode
+- **THEN** each nested level SHALL add four spaces per depth relative to the parent line
 
 #### Scenario: Trailing comma stripped on format
 
@@ -172,6 +189,22 @@ Trailing comma removal SHALL be applied in transform or emit to `trailingSep` (a
 
 - **WHEN** `JSON5.format` is called with `sortKeys: true, compact: true`
 - **THEN** output SHALL NOT contain lines that are only whitespace
+
+---
+
+### Requirement: indent option is string only (hard cut)
+
+`FormatOptions.indent` SHALL be a string. The implementation SHALL NOT accept the legacy `{ type, size }` object form. `DEFAULT_FORMAT_OPTIONS.indent` SHALL be `'  '`.
+
+#### Scenario: Object indent rejected or ignored is not supported
+
+- **WHEN** a caller passes `indent: { type: 'space', size: 2 }`
+- **THEN** the implementation SHALL NOT treat it as valid indent configuration (MAY throw or produce incorrect output; callers MUST migrate to string form)
+
+#### Scenario: Empty string indent
+
+- **WHEN** `JSON5.format(input, { indent: '' })` is called in pretty mode
+- **THEN** structural newlines SHALL still be emitted but member lines SHALL have no added indent prefix per level
 
 ---
 
