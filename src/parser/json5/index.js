@@ -36,14 +36,22 @@
  * - **说明**：仅做词法+语法分析，不构建 JavaScript 值；适合快速校验或 LSP 场景。
  *
  * ---------------------------------------------------------------------------
- * JSON5.parse(input)
+ * JSON5.parse(input, options?)
  * ---------------------------------------------------------------------------
  *
- * | 参数    | 类型   | 必填 | 说明 |
- * |---------|--------|------|------|
- * | `input` | string | 是   | 待解析的 JSON5 源字符串 |
+ * | 参数      | 类型            | 必填 | 说明 |
+ * |-----------|-----------------|------|------|
+ * | `input`   | string          | 是   | 待解析的 JSON5 源字符串 |
+ * | `options` | `ParseOptions`  | 否   | 解析选项，见下表 |
+ *
+ * **ParseOptions**
+ *
+ * | 字段       | 类型    | 默认    | 说明 |
+ * |------------|---------|---------|------|
+ * | `sortKeys` | boolean | `false` | 为 `true` 时对各 object（含嵌套）按 key 做 locale-aware 稳定排序；**不排序 array 元素**。算法与 `JSON5.format` 的 `sortKeys` 一致 |
  *
  * - **返回**：`unknown` — plain object、array、string、number、boolean 或 `null`
+ * - **抛出**：`ParseError`（词法/语法非法）；`sortKeys` 非 boolean 时 `TypeError`
  * - **说明**：支持 JSON5 扩展（无引号 key、尾逗号、注释、Infinity/NaN、十六进制数字等）。
  *   **注释不会出现在返回结果中**；需保留注释请用 `JSON5.format`。
  *
@@ -83,7 +91,7 @@ export { DEFAULT_FORMAT_OPTIONS };
 
 /**
  * JSON5 产品线：validate / parse / format。
- * @type {{ validate: (input: string) => void, parse: (input: string) => unknown, format: (input: string, options?: import('./format.js').FormatOptions) => string }}
+ * @type {{ validate: (input: string) => void, parse: (input: string, options?: import('./parse.js').ParseOptions) => unknown, format: (input: string, options?: import('./format.js').FormatOptions) => string }}
  */
 export const JSON5 = {
   validate,

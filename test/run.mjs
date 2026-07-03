@@ -146,6 +146,63 @@ runCase('json5 parse', () => JSON5.parse(json5Input), {
   },
 });
 
+runCase('json5 parse preserves source key order', () => JSON5.parse('{ b: 1, a: 2 }'), {
+  assert: (result) => {
+    const keys = Object.keys(result);
+    if (keys.length !== 2 || keys[0] !== 'b' || keys[1] !== 'a') {
+      throw new Error(`expected key order [b,a], got ${JSON.stringify(keys)}`);
+    }
+  },
+});
+
+runCase('json5 parse sortKeys top-level', () => JSON5.parse('{ b: 2, a: 1 }', { sortKeys: true }), {
+  assert: (result) => {
+    const keys = Object.keys(result);
+    if (JSON.stringify(keys) !== JSON.stringify(['a', 'b'])) {
+      throw new Error(`expected sorted keys [a,b], got ${JSON.stringify(keys)}`);
+    }
+    if (result.a !== 1 || result.b !== 2) {
+      throw new Error(`expected values a=1,b=2, got ${JSON.stringify(result)}`);
+    }
+  },
+});
+
+runCase('json5 parse sortKeys nested', () => JSON5.parse('{ z: { y: 1, x: 2 } }', { sortKeys: true }), {
+  assert: (result) => {
+    if (JSON.stringify(Object.keys(result)) !== JSON.stringify(['z'])) {
+      throw new Error(`expected top-level keys [z], got ${JSON.stringify(Object.keys(result))}`);
+    }
+    if (JSON.stringify(Object.keys(result.z)) !== JSON.stringify(['x', 'y'])) {
+      throw new Error(`expected nested keys [x,y], got ${JSON.stringify(Object.keys(result.z))}`);
+    }
+  },
+});
+
+runCase('json5 parse sortKeys array order unchanged', () => {
+  const arr = JSON5.parse('[3, 1, 2]', { sortKeys: true });
+  if (JSON.stringify(arr) !== JSON.stringify([3, 1, 2])) {
+    throw new Error(`expected array [3,1,2], got ${JSON.stringify(arr)}`);
+  }
+  const obj = JSON5.parse('{ b: [3, 1], a: 0 }', { sortKeys: true });
+  if (JSON.stringify(Object.keys(obj)) !== JSON.stringify(['a', 'b'])) {
+    throw new Error(`expected object keys [a,b], got ${JSON.stringify(Object.keys(obj))}`);
+  }
+  if (JSON.stringify(obj.b) !== JSON.stringify([3, 1])) {
+    throw new Error(`expected obj.b [3,1], got ${JSON.stringify(obj.b)}`);
+  }
+  return 'OK';
+});
+
+runCase('json5 parse sortKeys type error', () => {
+  try {
+    JSON5.parse('{}', { sortKeys: 1 });
+    throw new Error('expected TypeError for non-boolean sortKeys');
+  } catch (e) {
+    if (!(e instanceof TypeError)) throw e;
+    return 'OK';
+  }
+});
+
 runCase('json5 format (default)', () => {
   const result = JSON5.format(json5Input);
   assertExpectedMatch(result, join('json5', 'fixture.default.text'), 'json5 format default');
@@ -197,6 +254,63 @@ runCase('json parse', () => JSON4.parse(jsonInput), {
       throw new Error(`expected result["1"] === "数字key", got ${JSON.stringify(result['1'])}`);
     }
   },
+});
+
+runCase('json parse preserves source key order', () => JSON4.parse('{"b":1,"a":2}'), {
+  assert: (result) => {
+    const keys = Object.keys(result);
+    if (keys.length !== 2 || keys[0] !== 'b' || keys[1] !== 'a') {
+      throw new Error(`expected key order [b,a], got ${JSON.stringify(keys)}`);
+    }
+  },
+});
+
+runCase('json parse sortKeys top-level', () => JSON4.parse('{"b":2,"a":1}', { sortKeys: true }), {
+  assert: (result) => {
+    const keys = Object.keys(result);
+    if (JSON.stringify(keys) !== JSON.stringify(['a', 'b'])) {
+      throw new Error(`expected sorted keys [a,b], got ${JSON.stringify(keys)}`);
+    }
+    if (result.a !== 1 || result.b !== 2) {
+      throw new Error(`expected values a=1,b=2, got ${JSON.stringify(result)}`);
+    }
+  },
+});
+
+runCase('json parse sortKeys nested', () => JSON4.parse('{"z":{"y":1,"x":2}}', { sortKeys: true }), {
+  assert: (result) => {
+    if (JSON.stringify(Object.keys(result)) !== JSON.stringify(['z'])) {
+      throw new Error(`expected top-level keys [z], got ${JSON.stringify(Object.keys(result))}`);
+    }
+    if (JSON.stringify(Object.keys(result.z)) !== JSON.stringify(['x', 'y'])) {
+      throw new Error(`expected nested keys [x,y], got ${JSON.stringify(Object.keys(result.z))}`);
+    }
+  },
+});
+
+runCase('json parse sortKeys array order unchanged', () => {
+  const arr = JSON4.parse('[3,1,2]', { sortKeys: true });
+  if (JSON.stringify(arr) !== JSON.stringify([3, 1, 2])) {
+    throw new Error(`expected array [3,1,2], got ${JSON.stringify(arr)}`);
+  }
+  const obj = JSON4.parse('{"b":[3,1],"a":0}', { sortKeys: true });
+  if (JSON.stringify(Object.keys(obj)) !== JSON.stringify(['a', 'b'])) {
+    throw new Error(`expected object keys [a,b], got ${JSON.stringify(Object.keys(obj))}`);
+  }
+  if (JSON.stringify(obj.b) !== JSON.stringify([3, 1])) {
+    throw new Error(`expected obj.b [3,1], got ${JSON.stringify(obj.b)}`);
+  }
+});
+
+runCase('json parse sortKeys type error', () => {
+  try {
+    JSON4.parse('{}', { sortKeys: 1 });
+    throw new Error('expected TypeError for non-boolean sortKeys');
+  } catch (error) {
+    if (!(error instanceof TypeError)) {
+      throw error;
+    }
+  }
 });
 
 runCase('java8 firstClassName', () => JAVA8.firstClassName(javaInput));
