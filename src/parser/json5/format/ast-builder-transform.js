@@ -320,10 +320,8 @@ export function buildObjectEntriesForTest(ctx, tokenStream) {
  * @returns {DocumentNode}
  */
 export function transformDocumentAst(doc, options) {
-  return {
-    ...doc,
-    value: transformValue(doc.value, options),
-  };
+  doc.value = transformValue(doc.value, options);
+  return doc;
 }
 
 /**
@@ -341,19 +339,16 @@ function transformValue(node, options) {
  * @param {import('../format.js').ResolvedFormatOptions} options
  */
 function transformObject(node, options) {
-  let entries = node.entries.map((entry) => ({
-    ...entry,
-    value: transformValue(entry.value, options),
-  }));
-
-  if (options.sortKeys) {
-    entries = entries
-      .map((entry, ord) => ({ entry, ord }))
-      .sort((a, b) => a.entry.sortKey.localeCompare(b.entry.sortKey) || a.ord - b.ord)
-      .map((x) => x.entry);
+  const { entries } = node;
+  for (let i = 0; i < entries.length; i++) {
+    entries[i].value = transformValue(entries[i].value, options);
   }
-
-  return { ...node, entries };
+  if (options.sortKeys) {
+    const order = entries.map((_, ord) => ord);
+    order.sort((a, b) => entries[a].sortKey.localeCompare(entries[b].sortKey) || a - b);
+    node.entries = order.map((i) => entries[i]);
+  }
+  return node;
 }
 
 /**
@@ -361,11 +356,11 @@ function transformObject(node, options) {
  * @param {import('../format.js').ResolvedFormatOptions} options
  */
 function transformArray(node, options) {
-  const entries = node.entries.map((entry) => ({
-    ...entry,
-    value: transformValue(entry.value, options),
-  }));
-  return { ...node, entries };
+  const { entries } = node;
+  for (let i = 0; i < entries.length; i++) {
+    entries[i].value = transformValue(entries[i].value, options);
+  }
+  return node;
 }
 
 /**

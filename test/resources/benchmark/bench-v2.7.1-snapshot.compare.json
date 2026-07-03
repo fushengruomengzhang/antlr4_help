@@ -1,0 +1,313 @@
+{
+  "version": "2.7.1",
+  "baselineFile": "bench-v2.7.1.json",
+  "snapshotFile": "bench-v2.7.1-snapshot.json",
+  "baselineRecordedAt": "2026-07-03T08:09:43.947Z",
+  "snapshotRecordedAt": "2026-07-03T08:23:35.982Z",
+  "nodeVersion": {
+    "baseline": "v25.9.0",
+    "snapshot": "v25.9.0"
+  },
+  "summary": {
+    "total": 33,
+    "improved": 11,
+    "regressed": 20,
+    "unchanged": 2
+  },
+  "downstream": [
+    {
+      "group": "fixture default",
+      "baselineMs": 0.048,
+      "snapshotMs": 0.047,
+      "deltaMs": -0.001,
+      "deltaPct": -2.1
+    },
+    {
+      "group": "fixture sort+compact",
+      "baselineMs": 0.082,
+      "snapshotMs": 0.076,
+      "deltaMs": -0.006,
+      "deltaPct": -7.3
+    },
+    {
+      "group": "2000 keys compact",
+      "baselineMs": 1.357,
+      "snapshotMs": 1.377,
+      "deltaMs": 0.02,
+      "deltaPct": 1.5
+    },
+    {
+      "group": "2000 keys sort+compact",
+      "baselineMs": 1.75,
+      "snapshotMs": 1.603,
+      "deltaMs": -0.147,
+      "deltaPct": -8.4
+    }
+  ],
+  "rows": [
+    {
+      "label": "validate (fixture)",
+      "group": "fixture",
+      "baselineMs": 0.601,
+      "snapshotMs": 0.637,
+      "deltaMs": 0.036,
+      "deltaPct": 6
+    },
+    {
+      "label": "parse (fixture)",
+      "group": "fixture",
+      "baselineMs": 0.596,
+      "snapshotMs": 0.625,
+      "deltaMs": 0.029,
+      "deltaPct": 4.9
+    },
+    {
+      "label": "format default (fixture)",
+      "group": "fixture",
+      "baselineMs": 0.611,
+      "snapshotMs": 0.64,
+      "deltaMs": 0.029,
+      "deltaPct": 4.7
+    },
+    {
+      "label": "format compact (fixture)",
+      "group": "fixture",
+      "baselineMs": 0.632,
+      "snapshotMs": 0.654,
+      "deltaMs": 0.022,
+      "deltaPct": 3.5
+    },
+    {
+      "label": "format sort+compact (fixture)",
+      "group": "fixture",
+      "baselineMs": 0.773,
+      "snapshotMs": 0.658,
+      "deltaMs": -0.115,
+      "deltaPct": -14.9
+    },
+    {
+      "label": "format compact (50 keys)",
+      "group": "scale:50",
+      "baselineMs": 0.073,
+      "snapshotMs": 0.072,
+      "deltaMs": -0.001,
+      "deltaPct": -1.4
+    },
+    {
+      "label": "format sort+compact (50 keys)",
+      "group": "scale:50",
+      "baselineMs": 0.089,
+      "snapshotMs": 0.091,
+      "deltaMs": 0.002,
+      "deltaPct": 2.2
+    },
+    {
+      "label": "format compact (200 keys)",
+      "group": "scale:200",
+      "baselineMs": 0.274,
+      "snapshotMs": 0.28,
+      "deltaMs": 0.006,
+      "deltaPct": 2.2
+    },
+    {
+      "label": "format sort+compact (200 keys)",
+      "group": "scale:200",
+      "baselineMs": 0.315,
+      "snapshotMs": 0.318,
+      "deltaMs": 0.003,
+      "deltaPct": 1
+    },
+    {
+      "label": "format compact (500 keys)",
+      "group": "scale:500",
+      "baselineMs": 0.787,
+      "snapshotMs": 0.714,
+      "deltaMs": -0.073,
+      "deltaPct": -9.3
+    },
+    {
+      "label": "format sort+compact (500 keys)",
+      "group": "scale:500",
+      "baselineMs": 0.855,
+      "snapshotMs": 0.806,
+      "deltaMs": -0.049,
+      "deltaPct": -5.7
+    },
+    {
+      "label": "format compact (2000 keys)",
+      "group": "scale:2000",
+      "baselineMs": 2.889,
+      "snapshotMs": 2.921,
+      "deltaMs": 0.032,
+      "deltaPct": 1.1
+    },
+    {
+      "label": "format sort+compact (2000 keys)",
+      "group": "scale:2000",
+      "baselineMs": 3.177,
+      "snapshotMs": 3.399,
+      "deltaMs": 0.222,
+      "deltaPct": 7
+    },
+    {
+      "label": "parse+fill",
+      "group": "phases:fixture default",
+      "baselineMs": 0.549,
+      "snapshotMs": 0.564,
+      "deltaMs": 0.015,
+      "deltaPct": 2.7
+    },
+    {
+      "label": "buildDocumentAst",
+      "group": "phases:fixture default",
+      "baselineMs": 0.024,
+      "snapshotMs": 0.023,
+      "deltaMs": -0.001,
+      "deltaPct": -4.2
+    },
+    {
+      "label": "transform",
+      "group": "phases:fixture default",
+      "baselineMs": 0.001,
+      "snapshotMs": 0,
+      "deltaMs": -0.001,
+      "deltaPct": -100
+    },
+    {
+      "label": "emit",
+      "group": "phases:fixture default",
+      "baselineMs": 0.023,
+      "snapshotMs": 0.024,
+      "deltaMs": 0.001,
+      "deltaPct": 4.3
+    },
+    {
+      "label": "format e2e",
+      "group": "phases:fixture default",
+      "baselineMs": 0.613,
+      "snapshotMs": 0.613,
+      "deltaMs": 0,
+      "deltaPct": 0
+    },
+    {
+      "label": "parse+fill",
+      "group": "phases:fixture sort+compact",
+      "baselineMs": 0.56,
+      "snapshotMs": 0.564,
+      "deltaMs": 0.004,
+      "deltaPct": 0.7
+    },
+    {
+      "label": "buildDocumentAst",
+      "group": "phases:fixture sort+compact",
+      "baselineMs": 0.024,
+      "snapshotMs": 0.023,
+      "deltaMs": -0.001,
+      "deltaPct": -4.2
+    },
+    {
+      "label": "transform",
+      "group": "phases:fixture sort+compact",
+      "baselineMs": 0.01,
+      "snapshotMs": 0.005,
+      "deltaMs": -0.005,
+      "deltaPct": -50
+    },
+    {
+      "label": "emit",
+      "group": "phases:fixture sort+compact",
+      "baselineMs": 0.048,
+      "snapshotMs": 0.048,
+      "deltaMs": 0,
+      "deltaPct": 0
+    },
+    {
+      "label": "format e2e",
+      "group": "phases:fixture sort+compact",
+      "baselineMs": 0.642,
+      "snapshotMs": 0.647,
+      "deltaMs": 0.005,
+      "deltaPct": 0.8
+    },
+    {
+      "label": "parse+fill",
+      "group": "phases:2000 keys compact",
+      "baselineMs": 1.407,
+      "snapshotMs": 1.44,
+      "deltaMs": 0.033,
+      "deltaPct": 2.3
+    },
+    {
+      "label": "buildDocumentAst",
+      "group": "phases:2000 keys compact",
+      "baselineMs": 0.825,
+      "snapshotMs": 0.844,
+      "deltaMs": 0.019,
+      "deltaPct": 2.3
+    },
+    {
+      "label": "transform",
+      "group": "phases:2000 keys compact",
+      "baselineMs": 0.028,
+      "snapshotMs": 0.007,
+      "deltaMs": -0.021,
+      "deltaPct": -75
+    },
+    {
+      "label": "emit",
+      "group": "phases:2000 keys compact",
+      "baselineMs": 0.504,
+      "snapshotMs": 0.526,
+      "deltaMs": 0.022,
+      "deltaPct": 4.4
+    },
+    {
+      "label": "format e2e",
+      "group": "phases:2000 keys compact",
+      "baselineMs": 2.825,
+      "snapshotMs": 2.93,
+      "deltaMs": 0.105,
+      "deltaPct": 3.7
+    },
+    {
+      "label": "parse+fill",
+      "group": "phases:2000 keys sort+compact",
+      "baselineMs": 1.438,
+      "snapshotMs": 1.432,
+      "deltaMs": -0.006,
+      "deltaPct": -0.4
+    },
+    {
+      "label": "buildDocumentAst",
+      "group": "phases:2000 keys sort+compact",
+      "baselineMs": 0.835,
+      "snapshotMs": 0.841,
+      "deltaMs": 0.006,
+      "deltaPct": 0.7
+    },
+    {
+      "label": "transform",
+      "group": "phases:2000 keys sort+compact",
+      "baselineMs": 0.31,
+      "snapshotMs": 0.145,
+      "deltaMs": -0.165,
+      "deltaPct": -53.2
+    },
+    {
+      "label": "emit",
+      "group": "phases:2000 keys sort+compact",
+      "baselineMs": 0.605,
+      "snapshotMs": 0.617,
+      "deltaMs": 0.012,
+      "deltaPct": 2
+    },
+    {
+      "label": "format e2e",
+      "group": "phases:2000 keys sort+compact",
+      "baselineMs": 3.243,
+      "snapshotMs": 3.263,
+      "deltaMs": 0.02,
+      "deltaPct": 0.6
+    }
+  ]
+}

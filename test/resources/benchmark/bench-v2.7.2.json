@@ -1,0 +1,175 @@
+{
+  "version": "2.7.2",
+  "recordedAt": "2026-07-03T08:28:16.002Z",
+  "nodeVersion": "v25.9.0",
+  "warmup": 10,
+  "runs": 200,
+  "fixture": "test/resources/test.json5.text",
+  "results": [
+    {
+      "label": "validate (fixture)",
+      "msPerOp": 0.601,
+      "group": "fixture"
+    },
+    {
+      "label": "parse (fixture)",
+      "msPerOp": 0.619,
+      "group": "fixture"
+    },
+    {
+      "label": "format default (fixture)",
+      "msPerOp": 0.753,
+      "group": "fixture"
+    },
+    {
+      "label": "format compact (fixture)",
+      "msPerOp": 0.653,
+      "group": "fixture"
+    },
+    {
+      "label": "format sort+compact (fixture)",
+      "msPerOp": 0.634,
+      "group": "fixture"
+    },
+    {
+      "label": "format compact (50 keys)",
+      "msPerOp": 0.073,
+      "group": "scale:50"
+    },
+    {
+      "label": "format sort+compact (50 keys)",
+      "msPerOp": 0.087,
+      "group": "scale:50"
+    },
+    {
+      "label": "format compact (200 keys)",
+      "msPerOp": 0.269,
+      "group": "scale:200"
+    },
+    {
+      "label": "format sort+compact (200 keys)",
+      "msPerOp": 0.353,
+      "group": "scale:200"
+    },
+    {
+      "label": "format compact (500 keys)",
+      "msPerOp": 0.727,
+      "group": "scale:500"
+    },
+    {
+      "label": "format sort+compact (500 keys)",
+      "msPerOp": 0.789,
+      "group": "scale:500"
+    },
+    {
+      "label": "format compact (2000 keys)",
+      "msPerOp": 3.131,
+      "group": "scale:2000"
+    },
+    {
+      "label": "format sort+compact (2000 keys)",
+      "msPerOp": 3.199,
+      "group": "scale:2000"
+    },
+    {
+      "label": "  parse+fill",
+      "msPerOp": 0.548,
+      "group": "phases:fixture default"
+    },
+    {
+      "label": "  buildDocumentAst",
+      "msPerOp": 0.023,
+      "group": "phases:fixture default"
+    },
+    {
+      "label": "  transform",
+      "msPerOp": 0,
+      "group": "phases:fixture default"
+    },
+    {
+      "label": "  emit",
+      "msPerOp": 0.025,
+      "group": "phases:fixture default"
+    },
+    {
+      "label": "  format e2e",
+      "msPerOp": 0.591,
+      "group": "phases:fixture default"
+    },
+    {
+      "label": "  parse+fill",
+      "msPerOp": 0.545,
+      "group": "phases:fixture sort+compact"
+    },
+    {
+      "label": "  buildDocumentAst",
+      "msPerOp": 0.024,
+      "group": "phases:fixture sort+compact"
+    },
+    {
+      "label": "  transform",
+      "msPerOp": 0.005,
+      "group": "phases:fixture sort+compact"
+    },
+    {
+      "label": "  emit",
+      "msPerOp": 0.047,
+      "group": "phases:fixture sort+compact"
+    },
+    {
+      "label": "  format e2e",
+      "msPerOp": 0.638,
+      "group": "phases:fixture sort+compact"
+    },
+    {
+      "label": "  parse+fill",
+      "msPerOp": 1.412,
+      "group": "phases:2000 keys compact"
+    },
+    {
+      "label": "  buildDocumentAst",
+      "msPerOp": 0.818,
+      "group": "phases:2000 keys compact"
+    },
+    {
+      "label": "  transform",
+      "msPerOp": 0.008,
+      "group": "phases:2000 keys compact"
+    },
+    {
+      "label": "  emit",
+      "msPerOp": 0.505,
+      "group": "phases:2000 keys compact"
+    },
+    {
+      "label": "  format e2e",
+      "msPerOp": 2.825,
+      "group": "phases:2000 keys compact"
+    },
+    {
+      "label": "  parse+fill",
+      "msPerOp": 1.399,
+      "group": "phases:2000 keys sort+compact"
+    },
+    {
+      "label": "  buildDocumentAst",
+      "msPerOp": 0.84,
+      "group": "phases:2000 keys sort+compact"
+    },
+    {
+      "label": "  transform",
+      "msPerOp": 0.146,
+      "group": "phases:2000 keys sort+compact"
+    },
+    {
+      "label": "  emit",
+      "msPerOp": 0.619,
+      "group": "phases:2000 keys sort+compact"
+    },
+    {
+      "label": "  format e2e",
+      "msPerOp": 3.181,
+      "group": "phases:2000 keys sort+compact"
+    }
+  ]
+}

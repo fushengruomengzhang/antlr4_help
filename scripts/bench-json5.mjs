@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * JSON5 性能基准（手动运行，不进 npm test）。
- * 用法：node scripts/bench-json5.mjs [--write]
- *   --write  将结果写入 test/resources/benchmark/bench-v{version}.json
+ * 用法：node scripts/bench-json5.mjs [--write | --snapshot]
+ *   --write     将结果写入 test/resources/benchmark/bench-v{version}.json
+ *   --snapshot  将结果写入 test/resources/benchmark/bench-v{version}-snapshot.json
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -24,6 +25,7 @@ const fixture = readFileSync(fixturePath, 'utf8');
 const WARMUP = 10;
 const RUNS = 200;
 const writeResults = process.argv.includes('--write');
+const writeSnapshot = process.argv.includes('--snapshot');
 
 /** @type {{ label: string, msPerOp: number, group?: string }[]} */
 const records = [];
@@ -114,10 +116,11 @@ const big2000 = `{${Array.from({ length: 2000 }, (_, i) => `k${i}: ${i}`).join('
 benchPhases('2000 keys compact', big2000, { compact: true });
 benchPhases('2000 keys sort+compact', big2000, { sortKeys: true, compact: true });
 
-if (writeResults) {
+if (writeResults || writeSnapshot) {
   const outDir = join(root, 'test/resources/benchmark');
   mkdirSync(outDir, { recursive: true });
-  const outPath = join(outDir, `bench-v${version}.json`);
+  const suffix = writeSnapshot ? '-snapshot' : '';
+  const outPath = join(outDir, `bench-v${version}${suffix}.json`);
   const payload = {
     version,
     recordedAt: new Date().toISOString(),
