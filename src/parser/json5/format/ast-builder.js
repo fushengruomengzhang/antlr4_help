@@ -1,84 +1,129 @@
 import { keySourceText, keyToString, tripleStringBodyText } from '../decode.js';
-import { TokenStreamHelper } from './token-helpers.js';
+import {
+  endToken,
+  findCommaToken,
+  makeTriplet,
+  openLineEndToken,
+  sentinelEnd,
+  sentinelStart,
+  streamNextToken,
+  toCoord,
+} from './token-slice.js';
 
 /**
  * @param {import('../../grammars/json5/Json5Parser.js').default.Json5Context} root
  * @param {import('antlr4').CommonTokenStream} tokenStream
+ * @param {string} [input]
  * @returns {import('./types.js').DocumentNode}
  */
-export function buildDocumentAst(root, tokenStream) {
-  const helper = new TokenStreamHelper(tokenStream);
+export function buildDocumentAst(root, tokenStream, input = '') {
   const valueCtx = root.value();
+  const valueStop = endToken(valueCtx);
+  const startSentinel = sentinelStart();
+  const endSentinel = sentinelEnd(input.length || (valueStop?.stop ?? 0));
+
+  const valueStartCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(valueCtx.start));
+  const valueStopCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(valueStop));
+  const nextAfterStart = streamNextToken(tokenStream, valueCtx.start);
+
   return {
     kind: 'document',
-    before: helper.emitHidden(helper.hiddenLeft(valueCtx.start)),
-    value: buildValue(valueCtx, helper),
-    after: helper.emitHidden(helper.hiddenRight(helper.endToken(valueCtx))),
+    value: buildValue(valueCtx, tokenStream, startSentinel, endSentinel),
+    lead: makeTriplet(
+      startSentinel,
+      valueStartCoord,
+      toCoord(nextAfterStart) ?? endSentinel,
+    ),
+    trail: makeTriplet(
+      valueStopCoord,
+      endSentinel,
+      endSentinel,
+    ),
   };
 }
 
 /**
  * @param {import('../../grammars/json5/Json5Parser.js').default.ValueContext} ctx
- * @param {TokenStreamHelper} helper
- * @returns {import('./types.js').ValueNode}
+ * @param {import('antlr4').CommonTokenStream} tokenStream
+ * @param {import('./types.js').TokenCoord} outerPrev
+ * @param {import('./types.js').TokenCoord} outerNext
  */
-function buildValue(ctx, helper) {
-  if (ctx.object()) return buildObject(ctx.object(), helper);
-  if (ctx.array()) return buildArray(ctx.array(), helper);
-  if (ctx.tripleSingleString()) return buildTripleSingle(ctx.tripleSingleString(), helper);
-  if (ctx.tripleDoubleString()) return buildTripleDouble(ctx.tripleDoubleString(), helper);
-  return buildPrimitive(ctx);
+function buildValue(ctx, tokenStream, outerPrev, outerNext) {
+  if (ctx.object()) return buildObject(ctx.object(), tokenStream, outerPrev, outerNext);
+  if (ctx.array()) return buildArray(ctx.array(), tokenStream, outerPrev, outerNext);
+  if (ctx.tripleSingleString()) return buildTripleSingle(ctx.tripleSingleString(), tokenStream);
+  if (ctx.tripleDoubleString()) return buildTripleDouble(ctx.tripleDoubleString(), tokenStream);
+  return buildPrimitive(ctx, tokenStream);
 }
 
 /**
  * @param {import('../../grammars/json5/Json5Parser.js').default.ValueContext} ctx
- * @returns {import('./types.js').PrimitiveNode}
+ * @param {import('antlr4').CommonTokenStream} tokenStream
  */
-function buildPrimitive(ctx) {
-  if (ctx.STRING()) return { kind: 'primitive', source: ctx.STRING().getText() };
-  if (ctx.NUMBER()) return { kind: 'primitive', source: ctx.NUMBER().getText() };
-  if (ctx.TRUE()) return { kind: 'primitive', source: 'true' };
-  if (ctx.FALSE()) return { kind: 'primitive', source: 'false' };
-  if (ctx.NULL()) return { kind: 'primitive', source: 'null' };
-  if (ctx.literal()) return { kind: 'primitive', source: ctx.literal().getText() };
-  return { kind: 'primitive', source: ctx.getText() };
+function buildPrimitive(ctx, tokenStream) {
+  const tok = endToken(ctx);
+  const coord = /** @type {import('./types.js').TokenCoord} */ (toCoord(tok));
+  const next = streamNextToken(tokenStream, tok);
+  return {
+    kind: 'primitive',
+    source: ctx.getText(),
+    token: makeTriplet(coord, coord, toCoord(next) ?? sentinelEnd(0)),
+  };
 }
 
 /**
  * @param {import('../../grammars/json5/Json5Parser.js').default.TripleSingleStringContext} ctx
- * @param {TokenStreamHelper} helper
+ * @param {import('antlr4').CommonTokenStream} tokenStream
  */
-function buildTripleSingle(ctx, helper) {
+function buildTripleSingle(ctx, tokenStream) {
   const openTok = ctx.TRIPLE_S_OPEN().symbol;
+  const closeTok = ctx.TRIPLE_S_CLOSE().symbol;
+  const openCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(openTok));
+  const next = openLineEndToken(tokenStream, openTok, closeTok);
   return {
     kind: 'tripleSingle',
-    openRight: helper.emitHidden(helper.hiddenRight(openTok)),
+    open: makeTriplet(openCoord, openCoord, /** @type {import('./types.js').TokenCoord} */ (toCoord(next))),
     body: tripleStringBodyText(ctx),
   };
 }
 
 /**
  * @param {import('../../grammars/json5/Json5Parser.js').default.TripleDoubleStringContext} ctx
- * @param {TokenStreamHelper} helper
+ * @param {import('antlr4').CommonTokenStream} tokenStream
  */
-function buildTripleDouble(ctx, helper) {
+function buildTripleDouble(ctx, tokenStream) {
   const openTok = ctx.TRIPLE_D_OPEN().symbol;
+  const closeTok = ctx.TRIPLE_D_CLOSE().symbol;
+  const openCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(openTok));
+  const next = openLineEndToken(tokenStream, openTok, closeTok);
   return {
     kind: 'tripleDouble',
-    openRight: helper.emitHidden(helper.hiddenRight(openTok)),
+    open: makeTriplet(openCoord, openCoord, /** @type {import('./types.js').TokenCoord} */ (toCoord(next))),
     body: tripleStringBodyText(ctx),
   };
 }
 
 /**
  * @param {import('../../grammars/json5/Json5Parser.js').default.ObjectContext} ctx
- * @param {TokenStreamHelper} helper
+ * @param {import('antlr4').CommonTokenStream} tokenStream
+ * @param {import('./types.js').TokenCoord} outerPrev
+ * @param {import('./types.js').TokenCoord} outerNext
  */
-function buildObject(ctx, helper) {
+function buildObject(ctx, tokenStream, outerPrev, outerNext) {
   const openTok = ctx.start;
   const closeTok = ctx.stop;
+  const openCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(openTok));
+  const closeCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(closeTok));
   const members = ctx.member ? ctx.member() : [];
   const n = members.length;
+
+  const openFallback = n > 0 ? members[0].key().start : closeTok;
+  const openNextTok = openLineEndToken(tokenStream, openTok, openFallback);
+  const open = makeTriplet(
+    outerPrev,
+    openCoord,
+    /** @type {import('./types.js').TokenCoord} */ (toCoord(openNextTok)),
+  );
 
   /** @type {import('./types.js').ObjectEntry[]} */
   const entries = [];
@@ -88,141 +133,106 @@ function buildObject(ctx, helper) {
     const keyCtx = member.key();
     const keyTok = keyCtx.start;
     const valCtx = member.value();
-    const valStop = helper.endToken(valCtx);
-    const prevValStop = i > 0 ? helper.endToken(members[i - 1].value()) : null;
+    const valStop = endToken(valCtx);
+    const keyCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(keyTok));
+    const colonTok = streamNextToken(tokenStream, keyTok);
+    const nextKeyTok = i < n - 1 ? members[i + 1].key().start : closeTok;
 
-    const hiddenLeft = helper.hiddenLeft(keyTok);
-    const beforeFull = helper.emitHidden(hiddenLeft);
-    const beforeCompact =
-      i === 0
-        ? beforeFull
-        : helper.memberBefore(prevValStop, keyTok);
+    const keyPrev =
+      i === 0 ? openCoord : /** @type {import('./types.js').TokenCoord} */ (entries[i - 1].end.current);
 
-    const sourceNextKey =
-      i < n - 1 ? members[i + 1].key().start : closeTok;
-    const exclude =
-      i < n - 1
-        ? helper.excludedNextMemberPrefixIndices(valStop, members[i + 1].key().start)
-        : undefined;
-    const suffix = helper.spanBetween(valStop, sourceNextKey);
-    const suffixSort = exclude
-      ? helper.spanBetween(valStop, sourceNextKey, exclude)
-      : suffix;
+    const commaTok = findCommaToken(tokenStream, valStop.tokenIndex, nextKeyTok.tokenIndex);
+    const endCurrentTok = commaTok ?? valStop;
+    const endCurrentCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(endCurrentTok));
+    const endNextCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(nextKeyTok));
 
-    /** @type {import('./types.js').ObjectEntry} */
-    const entry = {
-      before: beforeCompact,
-      beforeFull,
+    entries.push({
+      key: makeTriplet(
+        keyPrev,
+        keyCoord,
+        /** @type {import('./types.js').TokenCoord} */ (toCoord(colonTok)),
+      ),
       keySource: keySourceText(keyCtx),
       sortKey: keyToString(keyCtx),
-      value: buildValue(valCtx, helper),
-      afterValue: helper.emitHidden(helper.hiddenRight(valStop)),
-      suffix,
-      suffixSort,
-    };
-    entries.push(entry);
+      value: buildValue(valCtx, tokenStream, endCurrentCoord, endNextCoord),
+      end: makeTriplet(
+        /** @type {import('./types.js').TokenCoord} */ (toCoord(valStop)),
+        endCurrentCoord,
+        endNextCoord,
+      ),
+      endHasComma: !!commaTok,
+    });
   }
 
-  const openRightTokens = helper.hiddenRight(openTok);
-  const openRightText = helper.emitHidden(openRightTokens);
-  if (entries.length > 0) {
-    entries[0].before = openRightText && entries[0].before.startsWith(openRightText)
-      ? entries[0].before.slice(openRightText.length)
-      : entries[0].before;
-  }
-
-  const closeBefore = computeCloseBefore(helper, members, closeTok, n);
+  const closePrev = n > 0 ? entries[n - 1].end.current : openCoord;
 
   return {
     kind: 'object',
-    openRight: helper.emitHidden(openRightTokens),
+    open,
     entries,
-    closeBefore,
+    close: makeTriplet(closePrev, closeCoord, outerNext),
   };
 }
 
 /**
- * @param {TokenStreamHelper} helper
- * @param {import('../../grammars/json5/Json5Parser.js').default.MemberContext[]} members
- * @param {import('antlr4').Token} closeTok
- * @param {number} n
- */
-function computeCloseBefore(helper, members, closeTok, n) {
-  if (members.length === 0) {
-    return helper.emitHidden(helper.hiddenLeft(closeTok));
-  }
-  const valStop = helper.endToken(members[n - 1].value());
-  /** @type {Set<number>} */
-  const assigned = new Set();
-  for (let i = valStop.tokenIndex + 1; i < closeTok.tokenIndex; i++) {
-    const t = helper.tokens.tokens[i];
-    if (t) assigned.add(t.tokenIndex);
-  }
-  return helper.emitHidden(
-    helper.hiddenLeft(closeTok).filter((t) => !assigned.has(t.tokenIndex)),
-  );
-}
-
-/**
  * @param {import('../../grammars/json5/Json5Parser.js').default.ArrayContext} ctx
- * @param {TokenStreamHelper} helper
+ * @param {import('antlr4').CommonTokenStream} tokenStream
+ * @param {import('./types.js').TokenCoord} outerPrev
+ * @param {import('./types.js').TokenCoord} outerNext
  */
-function buildArray(ctx, helper) {
+function buildArray(ctx, tokenStream, outerPrev, outerNext) {
   const openTok = ctx.start;
   const closeTok = ctx.stop;
+  const openCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(openTok));
+  const closeCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(closeTok));
   const values = ctx.value ? ctx.value() : [];
   const n = values.length;
+
+  const openNext = n > 0 ? values[0].start : closeTok;
+  const openNextTok = openLineEndToken(tokenStream, openTok, openNext);
+  const open = makeTriplet(
+    outerPrev,
+    openCoord,
+    /** @type {import('./types.js').TokenCoord} */ (toCoord(openNextTok)),
+  );
 
   /** @type {import('./types.js').ArrayEntry[]} */
   const entries = [];
 
   for (let i = 0; i < n; i++) {
     const valCtx = values[i];
-    const valStop = helper.endToken(valCtx);
-    const sourceNext = i < n - 1 ? values[i + 1].start : closeTok;
-    const suffix = helper.spanBetween(valStop, sourceNext);
+    const valStart = valCtx.start;
+    const valStop = endToken(valCtx);
+    const itemCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(valStart));
+    const nextItemTok = i < n - 1 ? values[i + 1].start : closeTok;
+
+    const itemPrev =
+      i === 0 ? openCoord : /** @type {import('./types.js').TokenCoord} */ (entries[i - 1].end.current);
+
+    const commaTok = findCommaToken(tokenStream, valStop.tokenIndex, nextItemTok.tokenIndex);
+    const endCurrentTok = commaTok ?? valStop;
+    const endCurrentCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(endCurrentTok));
+    const endNextCoord = /** @type {import('./types.js').TokenCoord} */ (toCoord(nextItemTok));
+
     entries.push({
-      before: helper.emitHidden(helper.hiddenLeft(valCtx.start)),
-      value: buildValue(valCtx, helper),
-      afterValue: helper.emitHidden(helper.hiddenRight(valStop)),
-      suffix,
-      suffixSort: suffix,
+      item: makeTriplet(itemPrev, itemCoord, endCurrentCoord),
+      value: buildValue(valCtx, tokenStream, endCurrentCoord, endNextCoord),
+      end: makeTriplet(
+        /** @type {import('./types.js').TokenCoord} */ (toCoord(valStop)),
+        endCurrentCoord,
+        endNextCoord,
+      ),
+      endHasComma: !!commaTok,
     });
   }
 
-  const openRightTokens = helper.hiddenRight(openTok);
-  if (entries.length > 0) {
-    const firstStart = values[0].start;
-    const fullBefore = helper.emitHidden(helper.hiddenLeft(firstStart));
-    entries[0].beforeFull = fullBefore;
-    const openRightText = helper.emitHidden(openRightTokens);
-    entries[0].before =
-      openRightText && fullBefore.startsWith(openRightText)
-        ? fullBefore.slice(openRightText.length)
-        : fullBefore;
-  }
-
-  let closeBefore = '';
-  if (values.length === 0) {
-    closeBefore = helper.emitHidden(helper.hiddenLeft(closeTok));
-  } else {
-    const valStop = helper.endToken(values[n - 1]);
-    /** @type {Set<number>} */
-    const assigned = new Set();
-    for (let i = valStop.tokenIndex + 1; i < closeTok.tokenIndex; i++) {
-      const t = helper.tokens.tokens[i];
-      if (t) assigned.add(t.tokenIndex);
-    }
-    closeBefore = helper.emitHidden(
-      helper.hiddenLeft(closeTok).filter((t) => !assigned.has(t.tokenIndex)),
-    );
-  }
+  const closePrev = n > 0 ? entries[n - 1].end.current : openCoord;
 
   return {
     kind: 'array',
-    openRight: helper.emitHidden(openRightTokens),
+    open,
     entries,
-    closeBefore,
+    close: makeTriplet(closePrev, closeCoord, outerNext),
   };
 }
 
@@ -231,5 +241,7 @@ function buildArray(ctx, helper) {
  * @param {import('antlr4').CommonTokenStream} tokenStream
  */
 export function buildObjectEntriesForTest(ctx, tokenStream) {
-  return buildObject(ctx, new TokenStreamHelper(tokenStream)).entries;
+  const startSentinel = sentinelStart();
+  const endSentinel = sentinelEnd(0);
+  return buildObject(ctx, tokenStream, startSentinel, endSentinel).entries;
 }

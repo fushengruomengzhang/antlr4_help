@@ -4,11 +4,11 @@
  * 用于测试 formatter
  */
 { // json 测试
-  // 字符串
   // 下划线
   "_private": true, // private
   // 特殊 key
   "$key": "value", // $
+  // 字符串
   1: "数字key", //dsd
   // 中文 key
   中文字段: "中文值", // 中文key
@@ -107,7 +107,6 @@
     "id": "1001", // 用户ID
     // 嵌套对象
     "profile": { // 资料对象
-      // 昵称
       /*// 地址*/
       "address": { // 地址信息 /*dsds*/
         // 城市
@@ -115,10 +114,11 @@
         // 邮编
         "zip": "100000" // 邮编
       },
-      "nickname": "管理员" // 用户昵称
+      // 昵称
+      "nickname": "管理员", // 用户昵称
     },
     // 用户名
-    "username": "admin" // 登录名
+    "username": "admin", // 登录名
   },
   // 对象数组
   "users": [ // 用户列表

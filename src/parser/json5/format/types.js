@@ -1,69 +1,84 @@
 /**
+ * @typedef {object} TokenCoord
+ * @property {number} idx
+ * @property {number} start
+ * @property {number} stop
+ * @property {number} line
+ * @property {number} col
+ * @property {string} type
+ */
+
+/**
+ * @typedef {object} AnchorTriplet
+ * @property {TokenCoord} prev
+ * @property {TokenCoord} current
+ * @property {TokenCoord} next
+ */
+
+/**
  * @typedef {DocumentNode | ObjectNode | ArrayNode | PrimitiveNode | TripleSingleNode | TripleDoubleNode} ValueNode
  */
 
 /**
  * @typedef {object} DocumentNode
  * @property {'document'} kind
- * @property {string} before
  * @property {ValueNode} value
- * @property {string} after
+ * @property {AnchorTriplet} lead
+ * @property {AnchorTriplet} trail
  */
 
 /**
  * @typedef {object} ObjectNode
  * @property {'object'} kind
- * @property {string} openRight
+ * @property {AnchorTriplet} open
  * @property {ObjectEntry[]} entries
- * @property {string} closeBefore
+ * @property {AnchorTriplet} close
  */
 
 /**
  * @typedef {object} ArrayNode
  * @property {'array'} kind
- * @property {string} openRight
+ * @property {AnchorTriplet} open
  * @property {ArrayEntry[]} entries
- * @property {string} closeBefore
+ * @property {AnchorTriplet} close
  */
 
 /**
  * @typedef {object} ObjectEntry
- * @property {string} before compact / sort prefix hidden before key
- * @property {string} [beforeFull] pretty non-sort full hiddenLeft before key
+ * @property {AnchorTriplet} key
  * @property {string} keySource
  * @property {string} sortKey
  * @property {ValueNode} value
- * @property {string} afterValue hidden immediately after value (pretty non-sort path)
- * @property {string} suffix full source-order suffix (compact non-sort)
- * @property {string} suffixSort suffix excluding next-member pure prefix (sortKeys)
+ * @property {AnchorTriplet} end
+ * @property {boolean} endHasComma
  */
 
 /**
  * @typedef {object} ArrayEntry
- * @property {string} before
+ * @property {AnchorTriplet} item
  * @property {ValueNode} value
- * @property {string} afterValue
- * @property {string} suffix
- * @property {string} suffixSort
+ * @property {AnchorTriplet} end
+ * @property {boolean} endHasComma
  */
 
 /**
  * @typedef {object} PrimitiveNode
  * @property {'primitive'} kind
  * @property {string} source
+ * @property {AnchorTriplet} token
  */
 
 /**
  * @typedef {object} TripleSingleNode
  * @property {'tripleSingle'} kind
- * @property {string} openRight
+ * @property {AnchorTriplet} open
  * @property {string} body
  */
 
 /**
  * @typedef {object} TripleDoubleNode
  * @property {'tripleDouble'} kind
- * @property {string} openRight
+ * @property {AnchorTriplet} open
  * @property {string} body
  */
 

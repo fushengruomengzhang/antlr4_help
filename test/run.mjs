@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSON4, JSON5, JAVA8, API, ParseError } from '../src/index.js';
 import { buildDocumentAst } from '../src/parser/json5/format/ast-builder.js';
+import { CommentSlicer } from '../src/parser/json5/format/token-slice.js';
 import Json5Lexer from '../src/grammars/json5/Json5Lexer.js';
 import Json5Parser from '../src/grammars/json5/Json5Parser.js';
 import { runParsePipeline } from '../src/parser/core/parse-pipeline.js';
@@ -372,20 +373,23 @@ runCase(
       entryRule: 'json5',
       fillTokens: true,
     });
-    const doc = buildDocumentAst(tree, tokenStream);
-    const obj = /** @type {{ kind: string, openRight: string, entries: Array<{ sortKey: string, before: string, suffixSort: string }> }} */ (
+    const doc = buildDocumentAst(tree, tokenStream, prefixInput);
+    const slicer = new CommentSlicer(tokenStream, prefixInput.length);
+    const obj = /** @type {{ kind: string, open: import('../src/parser/json5/format/types.js').AnchorTriplet, entries: Array<{ sortKey: string, key: import('../src/parser/json5/format/types.js').AnchorTriplet, end: import('../src/parser/json5/format/types.js').AnchorTriplet }> }} */ (
       doc.value
     );
     if (obj.kind !== 'object') {
       throw new Error('expected object root');
     }
     const chinese = obj.entries.find((e) => e.sortKey === '中文字段');
-    if (!chinese?.before.includes('中文 key')) {
-      throw new Error('expected // 中文 key in 中文字段.before (prefix slot)');
+    const chinesePrefix = slicer.prefixComments(chinese.key).join('');
+    if (!chinesePrefix.includes('中文 key')) {
+      throw new Error('expected // 中文 key in 中文字段 key prefix interval');
     }
     const dollar = obj.entries.find((e) => e.sortKey === '$key');
-    if (dollar?.before.includes('中文 key')) {
-      throw new Error('expected // 中文 key not on $key.before');
+    const dollarPrefix = slicer.prefixComments(dollar.key).join('');
+    if (dollarPrefix.includes('中文 key')) {
+      throw new Error('expected // 中文 key not on $key prefix interval');
     }
 
     const openingInput = readCase('json5.sort-compact-opening.text');
@@ -397,10 +401,12 @@ runCase(
       entryRule: 'json5',
       fillTokens: true,
     });
-    const openDoc = buildDocumentAst(opened.tree, opened.tokenStream);
-    const openObj = /** @type {{ openRight: string }} */ (openDoc.value);
-    if (!openObj.openRight.includes('head')) {
-      throw new Error('expected container openRight to include // head');
+    const openDoc = buildDocumentAst(opened.tree, opened.tokenStream, openingInput);
+    const openSlicer = new CommentSlicer(opened.tokenStream, openingInput.length);
+    const openObj = /** @type {{ open: import('../src/parser/json5/format/types.js').AnchorTriplet }} */ (openDoc.value);
+    const openInline = openSlicer.suffixComments(openObj.open, true).join('');
+    if (!openInline.includes('head')) {
+      throw new Error('expected container open suffix to include // head');
     }
 
     const inlineInput = readCase('json5.sort-inline-comment.text');
@@ -412,13 +418,15 @@ runCase(
       entryRule: 'json5',
       fillTokens: true,
     });
-    const inlineDoc = buildDocumentAst(inlineParsed.tree, inlineParsed.tokenStream);
-    const inlineObj = /** @type {{ entries: Array<{ sortKey: string, suffixSort: string }> }} */ (
+    const inlineDoc = buildDocumentAst(inlineParsed.tree, inlineParsed.tokenStream, inlineInput);
+    const inlineSlicer = new CommentSlicer(inlineParsed.tokenStream, inlineInput.length);
+    const inlineObj = /** @type {{ entries: Array<{ sortKey: string, end: import('../src/parser/json5/format/types.js').AnchorTriplet }> }} */ (
       inlineDoc.value
     );
     const age = inlineObj.entries.find((e) => e.sortKey === 'age');
-    if (!age?.suffixSort.includes('年龄')) {
-      throw new Error('expected // 年龄 in age.suffixSort (inline member suffix)');
+    const ageInline = inlineSlicer.suffixComments(age.end, true).join('');
+    if (!ageInline.includes('年龄')) {
+      throw new Error('expected // 年龄 in age end suffix interval');
     }
     return 'OK';
   },

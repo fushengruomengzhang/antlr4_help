@@ -22,9 +22,9 @@ export function format(input, options) {
         entryRule: 'json5',
         fillTokens: true,
     });
-    const ast = buildDocumentAst(tree, tokenStream);
+    const ast = buildDocumentAst(tree, tokenStream, input);
     const transformed = transformDocumentAst(ast, options);
-    return emitDocument(transformed, options);
+    return emitDocument(transformed, tokenStream, options, input);
 }
 
 export const JSON5 = {

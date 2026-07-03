@@ -1,14 +1,17 @@
 import { TextBuf } from '../../core/text-buf.js';
 import { decodeJson5String, encodeDoubleQuotedString } from '../decode.js';
 import { normalizeFormatOptions } from './format-options.js';
-import { stripTrailingCommaSuffix } from './ast-transform.js';
+import { CommentSlicer } from './token-slice.js';
 
 export class DocumentEmitter {
   /**
+   * @param {import('antlr4').CommonTokenStream} tokenStream
    * @param {Required<import('./format-options.js').FormatOptions>} options
+   * @param {number} [inputLen]
    */
-  constructor(options) {
+  constructor(tokenStream, options, inputLen = 0) {
     this.options = options;
+    this.slicer = new CommentSlicer(tokenStream, inputLen);
     /** @type {Map<number, string>} */
     this._indentCache = new Map();
   }
@@ -27,63 +30,46 @@ export class DocumentEmitter {
     return unit;
   }
 
-  /** @param {string} text */
-  compactWhitespace(text) {
-    return text.replace(/\n{2,}/g, '\n');
+  /** @param {import('./types.js').AnchorTriplet} triplet */
+  openInlineText(triplet) {
+    const parts = this.slicer.suffixComments(triplet, true);
+    return parts.join(' ');
+  }
+
+  /** @param {import('./types.js').AnchorTriplet} triplet */
+  inlineSuffix(triplet) {
+    const parts = this.slicer.suffixComments(triplet, true);
+    if (parts.length === 0) return '';
+    return parts.join(' ');
+  }
+
+  /** @param {import('./types.js').ObjectEntry} entry @param {boolean} isLast */
+  emitEntryEnd(entry, isLast) {
+    const inline = this.inlineSuffix(entry.end);
+    if (!isLast) return inline ? ', ' + inline : ',';
+    if (inline) return (entry.endHasComma ? ', ' : ' ') + inline;
+    return '';
+  }
+
+  /** @param {import('./types.js').ArrayEntry} entry @param {boolean} isLast */
+  emitArrayEntryEnd(entry, isLast) {
+    return this.emitEntryEnd(/** @type {import('./types.js').ObjectEntry} */ (entry), isLast);
+  }
+
+  /** @param {import('./types.js').AnchorTriplet} triplet */
+  prefixCommentLines(triplet) {
+    return this.slicer.prefixComments(triplet);
   }
 
   /**
-   * @param {string} text
-   * @param {boolean} compact
+   * @param {import('./types.js').AnchorTriplet} triplet
+   * @param {number} depth
    */
-  layoutHidden(text, compact) {
-    if (!text) return '';
-    return compact ? this.compactWhitespace(text) : text;
-  }
-
-  entrySuffix(entry, isLast) {
-    const raw = this.options.sortKeys ? entry.suffixSort : entry.suffix;
-    return this.normalizeMemberSuffix(raw, isLast, this.options.compact);
-  }
-
-  /** @param {string} suffix @param {boolean} isLast @param {boolean} compact */
-  normalizeMemberSuffix(suffix, isLast, compact) {
-    let out = suffix;
-    if (compact) {
-      out = this.compactWhitespace(out);
-      out = out.replace(/\n[ \t]*(?=\n)/g, '\n').replace(/\n{2,}/g, '\n');
-      out = out.replace(/\n[ \t]*$/g, '');
-    }
-    if (isLast) {
-      out = stripTrailingCommaSuffix(out);
-    } else if (!/,/.test(out)) {
-      out = ',' + out;
-    }
-    return this.normalizeCommaBeforeComment(out);
-  }
-
-  /** @param {string} suffix */
-  normalizeCommaBeforeComment(suffix) {
-    if (!suffix) return suffix;
-    return suffix
-      .replace(/^(\s*)((?:\/\/[^\n\r]*|\/\*[\s\S]*?\*\/)\s*),(\s*)$/m, ',$1$2$3')
-      .replace(/(\s*(?:\/\/[^\n\r]*|\/\*[\s\S]*?\*\/)\s*),(\s*)$/, ',$1$2');
-  }
-
-  /** @param {string} text */
-  splitOpeningHiddenFromText(text) {
-    if (!text) return { inline: '', hasLayout: false };
-    if (!/\n/.test(text)) return { inline: text, hasLayout: false };
-    let inline = '';
-    let hasLayout = false;
-    for (const part of text.split(/(?=\n)/)) {
-      if (/\n/.test(part)) {
-        hasLayout = true;
-      } else {
-        inline += part;
-      }
-    }
-    return { inline, hasLayout };
+  emitPrefixLines(triplet, depth) {
+    const comments = this.slicer.prefixComments(triplet);
+    if (comments.length === 0) return '';
+    const indent = this.indentUnit(depth);
+    return comments.map((c) => `${indent}${c}`).join('\n') + '\n' + indent;
   }
 
   /**
@@ -114,10 +100,9 @@ export class DocumentEmitter {
   /** @param {import('./types.js').DocumentNode} doc */
   emitDocument(doc) {
     const buf = new TextBuf();
-    const compact = this.options.compact;
-    buf.push(this.layoutHidden(doc.before, compact));
+    buf.push(this.slicer.hiddenGap(doc.lead.prev, doc.lead.current));
     buf.push(this.emitValue(doc.value, 0));
-    buf.push(this.layoutHidden(doc.after, compact));
+    buf.push(this.slicer.hiddenGap(doc.trail.prev, doc.trail.current));
     return buf.toString().trimEnd();
   }
 
@@ -136,7 +121,7 @@ export class DocumentEmitter {
   emitTripleSingle(node) {
     const buf = new TextBuf();
     buf.push("'''");
-    buf.push(node.openRight);
+    buf.push(this.slicer.hiddenRightText(node.open.current));
     buf.push(node.body);
     buf.push("'''");
     return buf.toString();
@@ -146,7 +131,7 @@ export class DocumentEmitter {
   emitTripleDouble(node) {
     const buf = new TextBuf();
     buf.push('"""');
-    buf.push(node.openRight);
+    buf.push(this.slicer.hiddenRightText(node.open.current));
     buf.push(node.body);
     buf.push('"""');
     return buf.toString();
@@ -175,34 +160,45 @@ export class DocumentEmitter {
     const indentMember = (d) => this.indentUnit(d);
 
     if (node.entries.length === 0) {
-      const { inline, hasLayout } = this.splitOpeningHiddenFromText(
-        this.layoutHidden(node.openRight, true),
-      );
+      const layout = this.slicer.openLayout(node.open);
       buf.push('{');
-      buf.push(inline);
-      if (hasLayout) {
+      if (layout.inline) {
+        buf.push(layout.inline.startsWith(' ') ? layout.inline : ' ' + layout.inline);
+      }
+      if (layout.hasMultiline) {
         buf.beginCloseLine(indentMember, depth);
       }
       buf.push('}');
       return buf.toString();
     }
 
+    if (depth > 0) {
+      const pre = this.emitPrefixLines(node.open, depth);
+      if (pre) buf.push(pre);
+    }
+
     buf.push('{');
-    buf.push(this.layoutHidden(node.openRight, true));
+    const openInline = this.openInlineText(node.open);
+    if (openInline) buf.push(' ', openInline);
 
     for (let i = 0; i < node.entries.length; i++) {
       const entry = node.entries[i];
       const isLast = i === node.entries.length - 1;
       buf.beginMemberLine(indentMember, depth);
-      const useSortBefore = this.options.sortKeys;
-      if (useSortBefore) {
-        buf.push(this.layoutHidden(entry.before, true));
+      const prefixComments = this.prefixCommentLines(entry.key);
+      for (let p = 0; p < prefixComments.length; p++) {
+        if (p > 0) buf.push('\n', indentMember(depth + 1));
+        buf.push(prefixComments[p]);
+      }
+      if (prefixComments.length > 0) {
+        buf.push('\n', indentMember(depth + 1));
       }
       buf.push(entry.keySource, ': ', this.emitMemberValue(entry.value, depth + 1));
-      buf.push(this.entrySuffix(entry, isLast));
+      buf.push(this.emitEntryEnd(entry, isLast));
     }
 
-    buf.push(this.layoutHidden(node.closeBefore, true));
+    const closeBefore = this.closeBeforeText(node);
+    if (closeBefore) buf.push(closeBefore);
     buf.beginCloseLine(indentMember, depth);
     buf.push('}');
     return buf.toString();
@@ -217,33 +213,45 @@ export class DocumentEmitter {
     const indentMember = (d) => this.indentUnit(d);
 
     if (node.entries.length === 0) {
-      const { inline, hasLayout } = this.splitOpeningHiddenFromText(
-        this.layoutHidden(node.openRight, true),
-      );
+      const layout = this.slicer.openLayout(node.open);
       buf.push('[');
-      buf.push(inline);
-      if (hasLayout) {
+      if (layout.inline) {
+        buf.push(layout.inline.startsWith(' ') ? layout.inline : ' ' + layout.inline);
+      }
+      if (layout.hasMultiline) {
         buf.beginCloseLine(indentMember, depth);
       }
       buf.push(']');
       return buf.toString();
     }
 
+    if (depth > 0) {
+      const pre = this.emitPrefixLines(node.open, depth);
+      if (pre) buf.push(pre);
+    }
+
     buf.push('[');
-    buf.push(this.layoutHidden(node.openRight, true));
+    const openInline = this.openInlineText(node.open);
+    if (openInline) buf.push(' ', openInline);
 
     for (let i = 0; i < node.entries.length; i++) {
       const entry = node.entries[i];
       const isLast = i === node.entries.length - 1;
       buf.beginMemberLine(indentMember, depth);
-      if (i === 0) {
-        buf.push(this.layoutHidden(entry.before, true));
+      const prefixComments = this.prefixCommentLines(entry.item);
+      for (let p = 0; p < prefixComments.length; p++) {
+        if (p > 0) buf.push('\n', indentMember(depth + 1));
+        buf.push(prefixComments[p]);
+      }
+      if (prefixComments.length > 0) {
+        buf.push('\n', indentMember(depth + 1));
       }
       buf.push(this.emitMemberValue(entry.value, depth + 1));
-      buf.push(this.entrySuffix(entry, isLast));
+      buf.push(this.emitArrayEntryEnd(entry, isLast));
     }
 
-    buf.push(this.layoutHidden(node.closeBefore, true));
+    const closeBefore = this.closeBeforeTextArray(node);
+    if (closeBefore) buf.push(closeBefore);
     buf.beginCloseLine(indentMember, depth);
     buf.push(']');
     return buf.toString();
@@ -255,37 +263,56 @@ export class DocumentEmitter {
    */
   emitObjectPretty(node, depth) {
     const buf = new TextBuf();
+    const indent = (d) => this.indentUnit(d);
+
     buf.push('{');
 
     if (node.entries.length === 0) {
-      buf.push(node.openRight, '}');
+      buf.push(
+        this.slicer.hiddenGap(node.open.prev, node.open.current),
+        this.slicer.hiddenGap(node.close.prev, node.close.current),
+        '}',
+      );
       return buf.toString();
     }
 
     for (let i = 0; i < node.entries.length; i++) {
       const entry = node.entries[i];
       const isLast = i === node.entries.length - 1;
-      buf.push('\n', this.indentUnit(depth + 1));
-      const prefix =
-        !this.options.sortKeys && entry.beforeFull != null
-          ? entry.beforeFull
-          : entry.before;
-      buf.push(prefix);
+      buf.push('\n', indent(depth + 1));
+      if (this.options.sortKeys) {
+        const prefixComments = this.prefixCommentLines(entry.key);
+        for (let p = 0; p < prefixComments.length; p++) {
+          if (p > 0) buf.push('\n', indent(depth + 1));
+          buf.push(prefixComments[p]);
+        }
+        if (prefixComments.length > 0) buf.push('\n', indent(depth + 1));
+      } else {
+        buf.push(this.slicer.hiddenGap(entry.key.prev, entry.key.current));
+      }
       buf.push(entry.keySource, ': ');
       buf.push(this.emitMemberValue(entry.value, depth + 1));
       if (this.options.sortKeys) {
-        buf.push(this.entrySuffix(entry, isLast));
+        buf.push(this.emitEntryEnd(entry, isLast));
       } else {
-        buf.push(entry.afterValue);
-        if (!isLast) {
-          buf.push(',');
-        }
+        buf.push(this.slicer.hiddenRightText(entry.end.prev));
+        if (!isLast) buf.push(',');
       }
     }
 
-    buf.push('\n', this.indentUnit(depth));
-    buf.push(node.closeBefore, '}');
+    buf.push('\n', indent(depth), this.closeBeforeText(node), '}');
     return buf.toString();
+  }
+
+  /**
+   * @param {import('./types.js').ObjectNode} node
+   */
+  closeBeforeText(node) {
+    const lastValStop =
+      node.entries.length > 0
+        ? node.entries[node.entries.length - 1].end.prev
+        : node.open.current;
+    return this.slicer.closeBeforeText(node.close, lastValStop);
   }
 
   /**
@@ -294,42 +321,66 @@ export class DocumentEmitter {
    */
   emitArrayPretty(node, depth) {
     const buf = new TextBuf();
+    const indent = (d) => this.indentUnit(d);
+
     buf.push('[');
 
     if (node.entries.length === 0) {
-      buf.push(node.openRight, ']');
+      buf.push(
+        this.slicer.hiddenGap(node.open.prev, node.open.current),
+        this.slicer.hiddenGap(node.close.prev, node.close.current),
+        ']',
+      );
       return buf.toString();
     }
 
     for (let i = 0; i < node.entries.length; i++) {
       const entry = node.entries[i];
       const isLast = i === node.entries.length - 1;
-      buf.push('\n', this.indentUnit(depth + 1));
-      const prefix = i === 0 && entry.beforeFull != null ? entry.beforeFull : entry.before;
-      buf.push(prefix);
+      buf.push('\n', indent(depth + 1));
+      if (this.options.sortKeys) {
+        const prefixComments = this.prefixCommentLines(entry.item);
+        for (let p = 0; p < prefixComments.length; p++) {
+          if (p > 0) buf.push('\n', indent(depth + 1));
+          buf.push(prefixComments[p]);
+        }
+        if (prefixComments.length > 0) buf.push('\n', indent(depth + 1));
+      } else {
+        buf.push(this.slicer.hiddenGap(entry.item.prev, entry.item.current));
+      }
       buf.push(this.emitMemberValue(entry.value, depth + 1));
       if (this.options.sortKeys) {
-        buf.push(this.entrySuffix(entry, isLast));
+        buf.push(this.emitArrayEntryEnd(entry, isLast));
       } else {
-        buf.push(entry.afterValue);
-        if (!isLast) {
-          buf.push(',');
-        }
+        buf.push(this.slicer.hiddenRightText(entry.end.prev));
+        if (!isLast) buf.push(',');
       }
     }
 
-    buf.push('\n', this.indentUnit(depth));
-    buf.push(node.closeBefore, ']');
+    buf.push('\n', indent(depth), this.closeBeforeTextArray(node), ']');
     return buf.toString();
+  }
+
+  /**
+   * @param {import('./types.js').ArrayNode} node
+   */
+  closeBeforeTextArray(node) {
+    const lastValStop =
+      node.entries.length > 0
+        ? node.entries[node.entries.length - 1].end.prev
+        : node.open.current;
+    return this.slicer.closeBeforeText(node.close, lastValStop);
   }
 }
 
 /**
  * @param {import('./types.js').DocumentNode} doc
+ * @param {import('antlr4').CommonTokenStream} tokenStream
  * @param {import('./format-options.js').FormatOptions} [options]
+ * @param {string} [input]
  */
-export function emitDocument(doc, options) {
+export function emitDocument(doc, tokenStream, options, input = '') {
   const normalized = normalizeFormatOptions(options);
-  const emitter = new DocumentEmitter(normalized);
+  const emitter = new DocumentEmitter(tokenStream, normalized, input.length);
   return emitter.emitDocument(doc);
 }

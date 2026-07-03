@@ -1,10 +1,5 @@
 import { normalizeFormatOptions } from './format-options.js';
 
-/** @param {string} suffix */
-export function stripTrailingCommaSuffix(suffix) {
-  return suffix.replace(/,(\s*(?:\/\/[^\n\r]*|\/\*[\s\S]*?\*\/)?\s*)$/, '$1');
-}
-
 /**
  * @param {import('./types.js').DocumentNode} doc
  * @param {import('./format-options.js').FormatOptions} [options]
@@ -44,15 +39,6 @@ function transformObject(node, options) {
       .map((x) => x.entry);
   }
 
-  entries = entries.map((entry, index) => {
-    if (index !== entries.length - 1) return entry;
-    return {
-      ...entry,
-      suffix: stripTrailingCommaSuffix(entry.suffix),
-      suffixSort: stripTrailingCommaSuffix(entry.suffixSort),
-    };
-  });
-
   return { ...node, entries };
 }
 
@@ -61,19 +47,9 @@ function transformObject(node, options) {
  * @param {Required<import('./format-options.js').FormatOptions>} options
  */
 function transformArray(node, options) {
-  let entries = node.entries.map((entry) => ({
+  const entries = node.entries.map((entry) => ({
     ...entry,
     value: transformValue(entry.value, options),
   }));
-
-  entries = entries.map((entry, index) => {
-    if (index !== entries.length - 1) return entry;
-    return {
-      ...entry,
-      suffix: stripTrailingCommaSuffix(entry.suffix),
-      suffixSort: stripTrailingCommaSuffix(entry.suffixSort),
-    };
-  });
-
   return { ...node, entries };
 }

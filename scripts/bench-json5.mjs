@@ -51,15 +51,15 @@ function benchPhases(label, input, options = {}) {
     });
   });
   bench(`  buildDocumentAst`, () => {
-    buildDocumentAst(cached.tree, cached.tokenStream);
+    buildDocumentAst(cached.tree, cached.tokenStream, input);
   });
-  const ast = buildDocumentAst(cached.tree, cached.tokenStream);
+  const ast = buildDocumentAst(cached.tree, cached.tokenStream, input);
   bench(`  transform`, () => {
     transformDocumentAst(ast, options);
   });
   const transformed = transformDocumentAst(ast, options);
   bench(`  emit`, () => {
-    emitDocument(transformed, options);
+    emitDocument(transformed, cached.tokenStream, options, input);
   });
   bench(`  format e2e`, () => {
     JSON5.format(input, options);
