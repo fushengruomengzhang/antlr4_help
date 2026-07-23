@@ -55,26 +55,16 @@ export function visitArrayChildren(nodes, visitFn) {
  */
 
 /**
- * SLL 预测失败时 reset 后以 LL 重试一次。
- * @param {import('antlr4').Parser} parser
- * @param {import('antlr4').CommonTokenStream} tokenStream
- * @param {() => import('antlr4').ParserRuleContext} entryFn
+ * 按语言选择预测模式：java8 → LL；json5 / json → SLL。
+ * @param {import('../parse-error.js').ParseLanguage} language
  */
-function parseWithPrediction(parser, tokenStream, entryFn) {
-  parser._interp.predictionMode = PredictionMode.SLL;
-  try {
-    return entryFn();
-  } catch {
-    tokenStream.seek(0);
-    parser.reset();
-    parser._interp.predictionMode = PredictionMode.LL;
-    return entryFn();
-  }
+function predictionModeForLanguage(language) {
+  return language === 'java8' ? PredictionMode.LL : PredictionMode.SLL;
 }
 
 /**
  * 统一 ANTLR 解析管线：InputStream → Lexer → TokenStream → Parser → entry rule。
- * 先尝试 SLL 预测，失败则 reset 后以 LL 重试。
+ * 预测模式按 `language` 分流（单次解析，无 Bail→LL 重试）。
  * @param {ParsePipelineOptions} options
  * @returns {{ tree: import('antlr4').ParserRuleContext, tokenStream: import('antlr4').CommonTokenStream, parser: import('antlr4').Parser }}
  */
@@ -86,10 +76,7 @@ export function runParsePipeline({ language, input, Lexer, Parser, entryRule, fi
   lexer.addErrorListener(lexerListener);
 
   const tokenStream = new antlr4.CommonTokenStream(lexer);
-  if (fillTokens) {
-    tokenStream.fill();
-  }
-
+  if (fillTokens) tokenStream.fill();
   const parser = new Parser(tokenStream);
   const parserListener = new CollectingErrorListener();
   parser.removeErrorListeners();
@@ -100,7 +87,8 @@ export function runParsePipeline({ language, input, Lexer, Parser, entryRule, fi
     throw new Error(`Parser has no entry rule "${entryRule}"`);
   }
 
-  const tree = parseWithPrediction(parser, tokenStream, () => entry.call(parser));
+  parser._interp.predictionMode = predictionModeForLanguage(language);
+  const tree = entry.call(parser);
 
   throwIfErrors(language, lexerListener);
   throwIfErrors(language, parserListener);

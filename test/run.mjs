@@ -337,6 +337,76 @@ runCase(
   },
 );
 
+runCase(
+  'java8 two-segment import (LL)',
+  () => JAVA8.firstClassName('import foo.Bar;\npublic class A {}'),
+  {
+    assert: (name) => {
+      if (name !== 'A') throw new Error(`expected A, got ${JSON.stringify(name)}`);
+    },
+  },
+);
+
+runCase(
+  'java8 two-segment package (LL)',
+  () => JAVA8.firstClassName('package a.b;\npublic class A {}'),
+  {
+    assert: (name) => {
+      if (name !== 'A') throw new Error(`expected A, got ${JSON.stringify(name)}`);
+    },
+  },
+);
+
+runCase(
+  'java8 lombok two-segment imports signatures',
+  () =>
+    JAVA8.signatures(`import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class TbUser {
+  private Long id;
+  private String name;
+}
+`),
+  {
+    assert: (fm) => {
+      const model = /** @type {{ types: Array<{ name: string, annotations: Record<string, unknown>, ownMembers: unknown[] }> }} */ (fm);
+      const t = model.types[0];
+      if (!t || t.name !== 'TbUser') {
+        throw new Error(`expected type TbUser, got ${JSON.stringify(t?.name)}`);
+      }
+      for (const ann of ['Data', 'Builder', 'NoArgsConstructor', 'AllArgsConstructor']) {
+        if (!(ann in t.annotations)) {
+          throw new Error(`missing class annotation ${ann}`);
+        }
+      }
+      const fields = t.ownMembers.filter((m) => /** @type {{ kind?: string }} */ (m).kind === 'field');
+      if (fields.length !== 2) {
+        throw new Error(`expected 2 fields, got ${fields.length}`);
+      }
+    },
+  },
+);
+
+runCase(
+  'java8 invalid still ParseError',
+  () => JAVA8.firstClassName('class {'),
+  {
+    expectError: true,
+    assertError: (error) => {
+      if (error.language !== 'java8') {
+        throw new Error(`expected language java8, got ${JSON.stringify(error.language)}`);
+      }
+    },
+  },
+);
+
 runCase('java8 signatures', () => JAVA8.signatures(javaInput));
 
 runCase(

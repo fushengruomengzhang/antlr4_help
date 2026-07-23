@@ -66,6 +66,7 @@ class PeekFirstClassNameListener extends Java8ParserListener {
 /**
  * 快速提取首个顶层类型名：parse 至类型 body 入口即终止，不 lex/parse body。
  * 不验证 body 语法；需 strict 校验时使用 firstClassName。
+ * 预测策略与 pipeline 的 java8=LL 一致（本路径使用 parser 默认/LL，非 SLL）。
  *
  * @param {string} input
  * @returns {string | null}
