@@ -1,6 +1,6 @@
 {
   "name": "antlr4_help",
-  "version": "2.8.1",
+  "version": "2.8.2",
   "description": "ANTLR 4.9.3 统一解析库：JSON5 / JSON4 / JAVA8 / API (Node + ESM)",
   "type": "module",
   "main": "src/index.js",
@@ -8,6 +8,7 @@
     "generate": "bash scripts/generate.sh",
     "start": "node src/index.js",
     "test": "node test/run.mjs",
+    "test:java8-file": "node test/java8-file.mjs",
     "test:update-expected": "node test/update-expected.mjs"
   },
   "dependencies": {

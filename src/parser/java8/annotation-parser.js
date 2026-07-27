@@ -1,4 +1,19 @@
 import antlr4 from 'antlr4';
+import Java8Parser from '../../grammars/java8/Java8Parser.js';
+
+/** @param {import('antlr4').ParserRuleContext} node */
+function isBlockedAnnotationExpression(node) {
+  return (
+    node instanceof Java8Parser.MethodInvocationContext ||
+    node instanceof Java8Parser.MethodInvocation_lf_primaryContext ||
+    node instanceof Java8Parser.MethodInvocation_lfno_primaryContext ||
+    node instanceof Java8Parser.ClassInstanceCreationExpressionContext ||
+    node instanceof Java8Parser.ClassInstanceCreationExpression_lf_primaryContext ||
+    node instanceof Java8Parser.ClassInstanceCreationExpression_lfno_primaryContext ||
+    node instanceof Java8Parser.LambdaExpressionContext ||
+    (node instanceof Java8Parser.ConditionalExpressionContext && !!node.QUESTION?.())
+  );
+}
 
 /** @param {import('../../grammars/java8/Java8Parser.js').default.TypeNameContext | null | undefined} ctx */
 export function typeNameSimpleName(ctx) {
@@ -163,21 +178,12 @@ function findLiteralInExpression(ctx) {
   /** @param {import('antlr4').ParserRuleContext} node */
   function walk(node) {
     if (!node || blocked) return;
-    const name = node.constructor?.name ?? '';
-    if (
-      name.includes('MethodInvocation') ||
-      name.includes('ClassInstanceCreation') ||
-      name.includes('Lambda')
-    ) {
+    if (isBlockedAnnotationExpression(node)) {
       blocked = true;
       return;
     }
-    if (name === 'ConditionalExpressionContext' && node.QUESTION?.()) {
-      blocked = true;
-      return;
-    }
-    if (name === 'LiteralContext') {
-      literal = /** @type {import('../../grammars/java8/Java8Parser.js').default.LiteralContext} */ (node);
+    if (node instanceof Java8Parser.LiteralContext) {
+      literal = node;
       return;
     }
     for (let i = 0; i < node.getChildCount(); i++) {

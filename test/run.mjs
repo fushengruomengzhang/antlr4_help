@@ -395,6 +395,56 @@ public class TbUser {
 );
 
 runCase(
+  'java8 ApiModelProperty literal attrs',
+  () =>
+    JAVA8.signatures(`public class T {
+  @ApiModelProperty(value = "商号id", hidden = true)
+  private String companyId;
+  @ApiModelProperty("发布范围")
+  private String scope;
+}
+`),
+  {
+    assert: (fm) => {
+      const model = /** @type {{ types: Array<{ ownMembers: Array<{ kind?: string, name?: string, annotations?: Record<string, Record<string, unknown>> }> }> }} */ (fm);
+      const fields = model.types[0]?.ownMembers.filter((m) => m.kind === 'field') ?? [];
+      const byName = Object.fromEntries(fields.map((f) => [f.name, f]));
+      const company = byName.companyId?.annotations?.ApiModelProperty;
+      if (company?.value !== '商号id' || company?.hidden !== true) {
+        throw new Error(`companyId ApiModelProperty mismatch: ${JSON.stringify(company)}`);
+      }
+      const scope = byName.scope?.annotations?.ApiModelProperty;
+      if (scope?.value !== '发布范围') {
+        throw new Error(`scope ApiModelProperty mismatch: ${JSON.stringify(scope)}`);
+      }
+    },
+  },
+);
+
+runCase(
+  'java8 ApiModelProperty non-literal value omitted',
+  () =>
+    JAVA8.signatures(`public class T {
+  @ApiModelProperty(value = Msg.X, hidden = true)
+  private String companyId;
+}
+`),
+  {
+    assert: (fm) => {
+      const model = /** @type {{ types: Array<{ ownMembers: Array<{ kind?: string, annotations?: Record<string, Record<string, unknown>> }> }> }} */ (fm);
+      const field = model.types[0]?.ownMembers.find((m) => m.kind === 'field');
+      const api = field?.annotations?.ApiModelProperty;
+      if (!api || 'value' in api) {
+        throw new Error(`expected no value key, got ${JSON.stringify(api)}`);
+      }
+      if (api.hidden !== true) {
+        throw new Error(`expected hidden true, got ${JSON.stringify(api)}`);
+      }
+    },
+  },
+);
+
+runCase(
   'java8 invalid still ParseError',
   () => JAVA8.firstClassName('class {'),
   {
